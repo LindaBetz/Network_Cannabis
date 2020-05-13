@@ -1,12 +1,42 @@
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~     Code for    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+#                                                                                                     #
+#                               Impact of age of onset of cannabis use                                #
+#                                  on expression of psychopathology                                   #
+#                             in the general population: a network view.                              #
+#                                                                                                     #
+#                                     developed by L. Betz                                            #
+#                                                                                                     #
+#                               - Analysis reported in main manuscript -                              #
+#                                                                                                     #
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+# ---------------------------------- 0: Reproducibility  -----------------------------------
+
+# for reproducibility, one can use the "checkpoint" package
+# in a temporal directory, it will *install* those package versions used when the script was written
+# these versions are then used to run the script
+# to this end, a server with snapshot images of archived package versions needs to be contacted
+# for more info visit: https://mran.microsoft.com/documents/rro/reproducibility
+
+#library(checkpoint)
+#checkpoint(snapshotDate = "2020-03-05",
+#         R.version = "4.0.0",
+#       checkpointLocation = tempdir())
+
+# ---------------------------------- 1: Load packages & data -----------------------------------
 library(haven)
 library(qgraph)
 library(bootnet)
-library(psychonetrics)
-library(dplyr)
+library(mgm)
+library(tidyverse)
 
 
-#X06693_0001_Data <- read_sav("DS0001/06693-0001-Data.sav")
-#X06693_0002_Data <- read_sav("DS0002/06693-0002-Data.sav")
+# all data sets are available at https://www.icpsr.umich.edu/icpsrweb/
+
+# NCS-1
+X06693_0001_Data <- read_sav("DS0001/06693-0001-Data.sav")
+
+
+# ---------------------------------- 2: Data preparation & sample descriptives -----------------------------------
 
 variable_names <- c(
   "age of onset",
@@ -28,43 +58,50 @@ variable_names <- c(
   "CONTROLLED BY FORCE",
   "OTHERS STOLE THOUGHTS",
   "SPECIAL MESSAGES/TV",
-  "HYPNOTZ/MAGIC/FORCE",
+  "hypnotized/MAGIC/FORCE",
   "SAW VISIONS",
   "HEARD NOISE/VOICE",
   "SMELLS/BODY ODORS",
-  "FEELNG IN/ON BODY"
+  "FEELNGS IN/ON BODY"
 ) %>% tolower(.)
 
 
 data <- X06693_0001_Data %>%
-  filter(V4097 <= 40) %>%
+  filter(V4097 <= 40) %>% # age at time of assessment <= 40
+  filter(V1907 == 1) %>% # lifetime cannabis use; N here 2,624
   transmute(
-    #V1907,
+    CASEID,
     age_onset = V1908,
     # 1
-    V1909,
+    cumulative_use = V1909,
     # 2
     
-    mol = ifelse(V6126 == 5, 0, ifelse(V6127 < 18, 1, 0)),
-    
+    # traumatic threat experiences: check if they happened in childhood (< 18 y/o)
+    molested = ifelse(V6126 == 5, 0, ifelse(V6127 < 18, 1, 0)),
     raped = ifelse(V6114 == 5, 0, ifelse(V6115 < 18, 1, 0)),
-    physical_assault = ifelse(V6138 == 5, 0, ifelse(V6139 < 18, 1, 0)),
-    sexual_abuse = ifelse(mol == 1 | raped == 1, 1, 0),
+    # physical abuse as a child
+    physical_abuse = ifelse(V6143 == 5, 0, 1),
     
     
-    V6143 = V6143,
-    # sexual abuse
+    # combine threat experiences in childhood into abuse variable
+    abuse = ifelse(
+      molested == 1 | raped == 1 |
+        physical_abuse == 1, 
+      #  physical_assault == 1,
+      1,
+      0
+    ),
     
-    abuse = ifelse(sexual_abuse == 1 |
-                     V6143 == 1 | physical_assault == 1, 1, 0),
-    
-    V6144,
+    neglect = ifelse(V6144 == 5, 0, 1),
+    # neglect in childhood
     # neglect
     
-    V7136,
+    urbanicity = ifelse(V7136 == 5 |
+                          V7136 == 4, 1, 0),
+    # urbanicity: city or suburb
     # urbanicity
     V301,
-    # panic: Have you ever in your life had a spell or attack when  all of a sudden you felt frightened, anxious or very uneasy in situations when most people would not be afraid or anxious?
+    # panic: Have you ever in your life had a spell or attack when all of a sudden you felt frightened, anxious or very uneasy in situations when most people would not be afraid or anxious?
     V302,
     # anxious: Have you ever had a period of one month or more when most of the time you felt worried or anxious?
     V308,
@@ -79,6 +116,7 @@ data <- X06693_0001_Data %>%
     #mania: Has there ever been a period of at least two days when you were so happy or excited that you got into trouble, or your family or friends worried about it, or a doctor said you were manic?
     
     V4101,
+    # psychotic experiences
     # 3
     V4103,
     # 4
@@ -105,57 +143,67 @@ data <- X06693_0001_Data %>%
     V4135 # 15
     
   ) %>%
-  select(-c(mol, raped, sexual_abuse, V6143, physical_assault)) %>%
-  filter(V4101 != 3) %>% # section K skipped entirely
-  na.omit() %>%
+  select(-c(molested, raped, physical_abuse)) %>% # drop these variables
+  na.omit() %>% # only complete cases, as network estimator does not allow missings
   mutate_all(as.numeric) %>%
-  mutate_at(vars(matches("V41|V3|V7403|V6|V1907")), ~ recode(.,
-                                                             `5` = 0)) %>%
-  mutate(V7136 = ifelse(V7136 == 5 | V7136 == 4, 1, 0))
+  mutate_at(vars(matches("V41|V3")), ~ recode(.,
+                                              `5` = 0))
 
 
+# get descriptives for sample
+data %>%  rename_at(vars(-CASEID), ~ paste0(variable_names)) %>%
+  left_join(X06693_0001_Data[c("CASEID", "V12", "V13")] %>% mutate_all(as.numeric), by =
+              "CASEID") %>%
+  rename(age = V12,
+         sex = V13) %>%
+  mutate(sex = ifelse(sex == 1, 0, 1)) %>%
+  summarise_all(c("mean","sd")) %>% mutate_all( ~ round(., 3))
 
+# how % many excluded due to missing values
+(2624-nrow(data))/2624 # 0.0304878
+
+# ---------------------------------- 3: Network Estimation -----------------------------------
+# we use a mixed graphical model as implemented in mgm-package
 graph_all <- estimateNetwork(
-  data,
-  # whole sample
+  data %>% select(-CASEID),
   default = "mgm",
   criterion = "EBIC",
   tuning = 0,
   rule = "OR"
 )
 
-
-
-
+# ---------------------------------- 4: Plotting the Network -----------------------------------
+# compute layout with all variables except age of onset
 all_lay <- qgraph(
   graph_all$graph[2:24, 2:24],
   layout = "spring",
-  repulsion = 0.9,
+  repulsion = 0.99,
   theme = "colorblind"
 )$layout
 
+# manually place age of onset & cumulative use in center of network
+all_lay[1, ] <- c(0.1, -0.6)
+lay <- rbind(c(0.1, -0.3), all_lay)
 
-lay <- rbind(c(0, 0.4), all_lay)
 
+# here, we unfade edges connected to cannabis onset age (1) and cumulative use (2)
+fade <- graph_all$graph < 1
 
-
-fade <- graph_all$graph > 0
-
-fade[2:ncol(graph_all$graph), ] <- TRUE
+fade[2:ncol(graph_all$graph),] <- TRUE
 fade[, 2:ncol(graph_all$graph)] <- TRUE
 
-fade[1, ] <- FALSE
+fade[1,] <- FALSE
 fade[, 1] <- FALSE
-fade[2, ] <- FALSE
+fade[2,] <- FALSE
 fade[, 2] <- FALSE
 
-#layout(t(matrix(c(1, 2,3), byrow = F)), widths = c(2, 2, 4))
-all <- qgraph(
+# here, we actually plot the network, and save it as a pdf ("main_network.pdf")
+qgraph(
   graph_all$graph,
-  layout = lay,
+  layout = lay*-1,
   fade = fade,
-  trans = FALSE,
-  color = c("#FED439", "#D2AF81", "#00A1D5FF", "#cad3db"),
+  trans = TRUE,
+  color = c("#FED439", "#F38D81", "#7FC8F8", "#cad3db"),
   groups = c(
     rep("Cannabis Use", 2),
     rep("Early Risk", 3),
@@ -164,28 +212,28 @@ all <- qgraph(
   ),
   theme = "colorblind",
   legend = T,
-  minimum = 0.01,
-  maximum = 0.8,
-  cut = 0.6,
-  #egend.mode = "groups",
-  labels = 1:ncol(data),
+  minimum = 0,
+  maximum = 0.9,
+  cut = 0.7,
+  labels = 1:ncol(data %>% select(-c(CASEID))),
   GLratio = 1.75,
   label.cex = 1.9,
   vsize = 3,
-  legend.cex = 0.5,
-  filename="out",
-  filetype="pdf",
+  legend.cex = 0.52,
+  filename = "main_network",
+  filetype = "pdf",
   edge.width = 1,
   nodeNames = variable_names
 )
 
-## bootstrapping procedures
+# ---------------------------------- 5: Bootstrapping -----------------------------------
 set.seed(1)
-case_boot_all <- bootnet(graph_all, nBoots = 1000, type="case", caseN = 10, nCores = 6)
+case_boot_all <-
+  bootnet(graph_all,
+          nBoots = 500,
+          type = "case",
+          caseN = 10)
 corStability(case_boot_all)
 
 set.seed(1)
-edge_boot_all <- bootnet(graph_all, nBoots = 1000, nCores = 6)
-
-
-compare_early_late <- NetworkComparisonTest::NCT(graph_early, graph_late, it=500)
+edge_boot_all <- bootnet(graph_all, nBoots = 500, nCores = 6)
