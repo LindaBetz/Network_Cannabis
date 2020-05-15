@@ -17,10 +17,12 @@
 # to this end, a server with snapshot images of archived package versions needs to be contacted
 # for more info visit: https://mran.microsoft.com/documents/rro/reproducibility
 
-#library(checkpoint)
-#checkpoint(snapshotDate = "2020-03-05",
-#         R.version = "4.0.0",
-#       checkpointLocation = tempdir())
+library(checkpoint)
+checkpoint(
+  snapshotDate = "2020-04-01",
+  R.version = "3.6.3",
+  checkpointLocation = tempdir()
+)
 
 # ---------------------------------- 1: Load packages & data -----------------------------------
 library(haven)
@@ -30,7 +32,7 @@ library(mgm)
 library(tidyverse)
 
 
-# all data sets are available at https://www.icpsr.umich.edu/icpsrweb/
+# the data set is available at https://www.icpsr.umich.edu/icpsrweb/
 
 # NCS-1
 X06693_0001_Data <- read_sav("DS0001/06693-0001-Data.sav")
@@ -43,7 +45,7 @@ variable_names <- c(
   "cumulative use",
   "childhood abuse",
   "childhood neglect",
-  "urban upbringing",
+  "urbanicity",
   "panic",
   "anxious",
   "sad",
@@ -75,7 +77,6 @@ data <- X06693_0001_Data %>%
     # 1
     cumulative_use = V1909,
     # 2
-    
     # traumatic threat experiences: check if they happened in childhood (< 18 y/o)
     molested = ifelse(V6126 == 5, 0, ifelse(V6127 < 18, 1, 0)),
     raped = ifelse(V6114 == 5, 0, ifelse(V6115 < 18, 1, 0)),
@@ -84,13 +85,11 @@ data <- X06693_0001_Data %>%
     
     
     # combine threat experiences in childhood into abuse variable
-    abuse = ifelse(
-      molested == 1 | raped == 1 |
-        physical_abuse == 1, 
-      #  physical_assault == 1,
-      1,
-      0
-    ),
+    abuse = ifelse(molested == 1 | raped == 1 |
+                     physical_abuse == 1,
+                   #  physical_assault == 1,
+                   1,
+                   0),
     
     neglect = ifelse(V6144 == 5, 0, 1),
     # neglect in childhood
@@ -157,15 +156,19 @@ data %>%  rename_at(vars(-CASEID), ~ paste0(variable_names)) %>%
   rename(age = V12,
          sex = V13) %>%
   mutate(sex = ifelse(sex == 1, 0, 1)) %>%
-  summarise_all(c("mean","sd")) %>% mutate_all( ~ round(., 3))
+  summarise_all(c("mean", "sd")) %>%
+  mutate_all(~ round(., 3))
 
-# how % many excluded due to missing values
-(2624-nrow(data))/2624 # 0.0304878
+# how many % of participants were excluded due to missing values?
+(2624 - nrow(data)) / 2624 # 0.0304878
+
+data_network <- data %>% select(-CASEID)
+colnames(data_network) <- as.character(1:24)
 
 # ---------------------------------- 3: Network Estimation -----------------------------------
 # we use a mixed graphical model as implemented in mgm-package
 graph_all <- estimateNetwork(
-  data %>% select(-CASEID),
+  data_network,
   default = "mgm",
   criterion = "EBIC",
   tuning = 0,
@@ -182,25 +185,23 @@ all_lay <- qgraph(
 )$layout
 
 # manually place age of onset & cumulative use in center of network
-all_lay[1, ] <- c(0.1, -0.6)
-lay <- rbind(c(0.1, -0.3), all_lay)
+all_lay[1,] <- c(0.1,-0.6)
+lay <- rbind(c(0.1,-0.3), all_lay)
 
 
-# here, we unfade edges connected to cannabis onset age (1) and cumulative use (2)
+# we unfade edges connected to cannabis onset age (1) and cumulative use (2)
 fade <- graph_all$graph < 1
 
-fade[2:ncol(graph_all$graph),] <- TRUE
-fade[, 2:ncol(graph_all$graph)] <- TRUE
+fade[2:ncol(graph_all$graph), ] <-
+  fade[, 2:ncol(graph_all$graph)] <- TRUE
+fade[1, ] <- fade[, 1] <- fade[2, ] <- fade[, 2]  <- FALSE
 
-fade[1,] <- FALSE
-fade[, 1] <- FALSE
-fade[2,] <- FALSE
-fade[, 2] <- FALSE
 
-# here, we actually plot the network, and save it as a pdf ("main_network.pdf")
-qgraph(
+# here, we actually plot the network and save it as a pdf in wd ("main_network.pdf")
+main_network <- qgraph(
   graph_all$graph,
-  layout = lay*-1,
+  layout = lay * -1,
+  # flip everything because it looks nicer
   fade = fade,
   trans = TRUE,
   color = c("#FED439", "#F38D81", "#7FC8F8", "#cad3db"),
@@ -212,28 +213,88 @@ qgraph(
   ),
   theme = "colorblind",
   legend = T,
-  minimum = 0,
-  maximum = 0.9,
-  cut = 0.7,
-  labels = 1:ncol(data %>% select(-c(CASEID))),
+  #minimum = 0,
+  #maximum = 0.2,
+  #cut = 0.5,
+  labels = 1:ncol(data_network),
   GLratio = 1.75,
   label.cex = 1.9,
   vsize = 3,
   legend.cex = 0.52,
   filename = "main_network",
   filetype = "pdf",
-  edge.width = 1,
+  edge.width = 0.5,
   nodeNames = variable_names
 )
 
-# ---------------------------------- 5: Bootstrapping -----------------------------------
+# moderated network analysis
 set.seed(1)
-case_boot_all <-
-  bootnet(graph_all,
-          nBoots = 500,
-          type = "case",
-          caseN = 10)
-corStability(case_boot_all)
+mgm_mod_cannabis <- mgm(
+  data = data_network,
+  type = c(rep("g", 2), rep("c", 22)),
+  lambdaSel = "EBIC",
+  ruleReg = "OR",
+  moderators = 1:2,
+  lambdaGam = 0,
+  threshold = "none",
+  pbar = TRUE
+)
+
+
+
 
 set.seed(1)
-edge_boot_all <- bootnet(graph_all, nBoots = 500, nCores = 6)
+moderated_network_boot <- mgm::resample(
+  object = mgm_mod_cannabis,
+  data = data_network,
+  nB = 50,
+  pbar = TRUE
+)
+
+# function to extract all weights of 3-way interactions from model
+getWeights <- function(x,y=mgm_mod_cannabis) {
+  mod_effects <-
+    y$interactions$indicator[[2]] # all relevant 3-way interactions stored here
+  
+  df <- data.frame(matrix(ncol = nrow(mod_effects), nrow = 1))
+  colnames(df) <- as.character(1:nrow(mod_effects))
+  
+  for (i in 1:nrow(mod_effects)) {
+    df[, i] <- showInteraction(x, mod_effects[i, ])$edgeweight
+  }
+  return(df)
+}
+
+numberZero <- function(x){
+  sum(x==0)/length(x)
+}
+
+  
+moderated_network_boot$models %>%
+  map_df(~ getWeights(.)) %>%
+  summarise_all(list(
+    ~ mean(.[. > 0]),
+    ~ quantile(.[. > 0], 0.05),
+    ~ quantile(.[. > 0], 0.95),
+    ~ numberZero(.)
+  )) %>%   gather(key = key, value = value) %>%
+  separate(key, into = c("type", "stat"), sep = "_") %>% 
+   spread(key = stat, value = value)
+
+# ---------------------------------- 5: Bootstrapping -----------------------------------
+# we bootstrap our model => it takes rather long (~2h per analysis) to run this
+edge_boot <- bootnet(graph_all, nBoots = 1000, nCores = 6)
+
+
+case_boot <-
+  bootnet(
+    graph_all,
+    statistics = "edge",
+    # we are not interested in centrality measures
+    nBoots = 1000,
+    type = "case",
+    caseN = 10,
+    nCores = 6
+  )
+
+corStability(case_boot) # 0.672 for edge
