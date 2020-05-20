@@ -5,11 +5,11 @@ Code by L. Betz (linda.betz@uk-koeln.de)
 
 There are three files:
 
-Code_Main_Analysis.R provides code to reproduce findings and plots reported in the main manuscript.
+* Code_Main_Analysis.R provides code to reproduce findings and plots reported in the main manuscript.
 
-Code_Supplementary_Analysis.R provides code to reproduce findings and plots reported in the supplementary file.
+* Code_Supplementary_Analysis.R provides code to reproduce findings and plots reported in the supplementary file.
 
-Weighted_adjacency_matrix.zip provides the weighted adjacency matrix containing the coefficients for the Mixel Graphical Model reported in the paper as a .csv-file.
+* Weighted_adjacency_matrix.zip provides the weighted adjacency matrix containing the coefficients for the Mixel Graphical Model reported in the paper as a .csv-file.
 
 Data required for the analysis is available at https://www.icpsr.umich.edu/icpsrweb/:
 
