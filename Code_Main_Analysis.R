@@ -198,6 +198,7 @@ fade[1, ] <- fade[, 1] <- fade[2, ] <- fade[, 2]  <- FALSE
 
 
 # here, we actually plot the network and save it as a pdf in wd ("main_network.pdf")
+pdf("network.pdf", colormodel = 'cmyk', width = 11, height = 7)
 main_network <- qgraph(
   graph_all$graph,
   layout = lay * -1,
@@ -211,90 +212,17 @@ main_network <- qgraph(
     rep("Mood", 6),
     rep("Psychosis", 13)
   ),
-  theme = "colorblind",
+  theme = "Borkulo",
   legend = T,
-  #minimum = 0,
-  #maximum = 0.2,
-  #cut = 0.5,
+  cut = 0,
   labels = 1:ncol(data_network),
   GLratio = 1.75,
   label.cex = 1.9,
   vsize = 3,
   legend.cex = 0.52,
-  filename = "main_network",
-  filetype = "pdf",
+  #filename = "main_network",
+  #filetype = "pdf",
   edge.width = 0.5,
   nodeNames = variable_names
 )
-
-# moderated network analysis
-set.seed(1)
-mgm_mod_cannabis <- mgm(
-  data = data_network,
-  type = c(rep("g", 2), rep("c", 22)),
-  lambdaSel = "EBIC",
-  ruleReg = "OR",
-  moderators = 1:2,
-  lambdaGam = 0,
-  threshold = "none",
-  pbar = TRUE
-)
-
-
-
-
-set.seed(1)
-moderated_network_boot <- mgm::resample(
-  object = mgm_mod_cannabis,
-  data = data_network,
-  nB = 50,
-  pbar = TRUE
-)
-
-# function to extract all weights of 3-way interactions from model
-getWeights <- function(x,y=mgm_mod_cannabis) {
-  mod_effects <-
-    y$interactions$indicator[[2]] # all relevant 3-way interactions stored here
-  
-  df <- data.frame(matrix(ncol = nrow(mod_effects), nrow = 1))
-  colnames(df) <- as.character(1:nrow(mod_effects))
-  
-  for (i in 1:nrow(mod_effects)) {
-    df[, i] <- showInteraction(x, mod_effects[i, ])$edgeweight
-  }
-  return(df)
-}
-
-numberZero <- function(x){
-  sum(x==0)/length(x)
-}
-
-  
-moderated_network_boot$models %>%
-  map_df(~ getWeights(.)) %>%
-  summarise_all(list(
-    ~ mean(.[. > 0]),
-    ~ quantile(.[. > 0], 0.05),
-    ~ quantile(.[. > 0], 0.95),
-    ~ numberZero(.)
-  )) %>%   gather(key = key, value = value) %>%
-  separate(key, into = c("type", "stat"), sep = "_") %>% 
-   spread(key = stat, value = value)
-
-# ---------------------------------- 5: Bootstrapping -----------------------------------
-# we bootstrap our model => it takes rather long (~2h per analysis) to run this
-edge_boot <- bootnet(graph_all, nBoots = 1000, nCores = 6)
-
-
-case_boot <-
-  bootnet(
-    graph_all,
-    statistics = "edge",
-    # we are not interested in centrality measures
-    nBoots = 1000,
-    type = "case",
-    caseN = 10,
-    nCores = 6
-  )
-
-corStability(case_boot) # 0.672 for edge
+dev.off()
