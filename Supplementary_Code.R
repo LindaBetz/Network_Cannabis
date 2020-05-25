@@ -196,30 +196,31 @@ case_boot <-
 # into adjacent sub-plots (assuming split0=T)
 # Particularly for graphs with many nodes, this ensures readability and visability
 
-x <-
-  edge_boot # an object of type bootnet, resulting from bootstrapping
-n_blocks <-
-  5 # number of sections into which the plot should be devided
 
-# some other values, we leave them mostly at default
+x <- boot_cole_covariates
 meanVar <- "mean"
+
 minArea <- "q2.5"
 maxArea <- "q97.5"
 
 minArea <- paste0(minArea, "_non0")
 maxArea <- paste0(maxArea, "_non0")
 meanVar <- paste0(meanVar, "_non0")
-statistics  <- "edge"
+statistics = "edge"
 
-prop0_minAlpha = 0.50
+prop0_minAlpha = 0.25
 prop0_cex = 0.75
-prop0_alpha = 0.5
+prop0_alpha = 0.8
+rank = F
+meanColor <- bootColor <- "black"
+sampleColor = "red"
+which_nodes <- 1:2 # the nodes, here given as integers 
+n_facets <- 2 # how many blocks
 
+# Compute summary stats:
 sumTable <-
-  summary(x, statistics = "edge", rank = F)  %>% ungroup %>% dplyr::mutate_(type = ~
-                                                                              factor(type, levels = statistics))
-
-# Summarize first:
+  summary(x, statistics = statistics, rank = rank)  %>% ungroup %>% dplyr::mutate_(type = ~
+                                                                                     factor(type, levels = statistics))
 
 summary <-
   sumTable %>% dplyr::group_by_( ~ id) %>% dplyr::summarize_(sample = ~
@@ -241,6 +242,19 @@ sumTable <- sumTable %>%
 revTable <- function(x)
   x[nrow(x):1, ]
 
+
+#     if (CIstyle == "SE"){
+#       minArea <- "CIlower"
+#       maxArea <- "CIupper"
+#     } else {
+#       minArea <- "q2.5"
+#       maxArea <- "q97.5"
+#     }
+
+# sumTable <- sumTable %>% mutate_(
+#   lbound = ~ifelse(CIstyle[match(type,statistics)] == "SE", CIlower,q2.5),
+#   ubound = ~ifelse(CIstyle[match(type,statistics)] == "SE", CIupper, q97.5)
+# )
 sumTable$lbound <- sumTable[[minArea]]
 sumTable$ubound <- sumTable[[maxArea]]
 
@@ -270,74 +284,88 @@ sumTable2 <- dplyr::bind_rows(
   )
 )
 
-sumTable <-
-  sumTable %>% left_join(
-    sumTable2 %>% arrange(id, ci) %>% mutate(type_ci = rep(
-      c("lower", "upper"),  max(x$bootTable$rank_avg)
-    )) %>%
-      reshape2::dcast(., id ~ type_ci, value.var = "ci"),
-    by = "id"
-  )
+
+#     sumTable <- sumTable[gtools::mixedorder(sumTable$id),]
+#     sumTable$id <- factor(gsub("^(E|N): ","",as.character(sumTable$id)), levels = gsub("^(E|N): ","",unique(gtools::mixedsort(as.character(sumTable$id)))))
 
 gathered_sumTable <-
   tidyr::gather_(sumTable, "var", "value", c("sample", meanVar))
 
 
-gathered_sumTable$alpha.a <- ifelse(
-  gathered_sumTable$var == meanVar,
-  prop0_minAlpha + (1 - prop0_minAlpha) * (1 -
-                                             gathered_sumTable$prop0),
-  1
-)
-gathered_sumTable$alpha.b <-
+gathered_sumTable$alpha <-
+  ifelse(
+    gathered_sumTable$var == meanVar,
+    prop0_minAlpha + (1 - prop0_minAlpha) * (1 -
+                                               gathered_sumTable$prop0),
+    1
+  )
+sumTable2$alpha <-
   prop0_minAlpha + (1 - prop0_minAlpha) * (1 - sumTable2$prop0)
 
+
+
+# for convenience, we determine the facet membership here
+split_plot <- gathered_sumTable %>% arrange(node1, node2) %>%
+  filter(node1 %in% which_nodes | node2 %in% which_nodes) %>%
+  transmute(id, split_plot = -ntile(mean, n_facets)) %>%
+  distinct(., id, .keep_all=TRUE)
+
+
+
+
 pdf("edge_weights_bootstrapped_CI.pdf", height = 8.27, width =  11.69)
-gathered_sumTable %>%
-  mutate(split_plot = -ntile(mean, n_blocks)) %>%
-  ggplot(.,
-         aes_string(
-           x = 'value',
-           y = 'id',
-           group = 'id',
-           colour = "var"
-         )) +
+
+# the acutal plot comes here
+gathered_sumTable %>% arrange(node1, node2) %>%
+  filter(node1 %in% which_nodes | node2 %in% which_nodes) %>%
+  left_join(split_plot, by = "id") %>%
+  ggplot(., aes_string(
+    x = 'value',
+    y = 'id',
+    group = 'id',
+    colour = "var"
+  )) +
   facet_wrap( ~ split_plot, scales = "free_y", nrow = 1) +
-  geom_point(aes_string(alpha = 'alpha.a')) +
-  geom_segment(
+  
+  geom_point(aes_string(alpha = 'alpha'), size = 3) +
+  geom_path(
     aes_string(
-      x = "lbound",
       y = 'id',
-      xend = "ubound",
-      yend = 'id',
-      alpha = 'alpha.b',
-      group = 'id'
+      group = 'id',
+      x = 'ci',
+      alpha = 'alpha'
     ),
-    colour = "black"
+    colour = bootColor,
+    data = sumTable2 %>%  arrange(node1, node2) %>% filter(node1 %in% which_nodes |
+                                                             node2 %in% which_nodes) %>% left_join(split_plot, by = "id")
   ) +
   geom_label(
     aes(x = 0, label = format(round(prop0, 2), nsmall = 2)),
-    cex = prop0_cex * 3.1,
+    cex = prop0_cex * 3.5,
+    data = sumTable %>% arrange(node1, node2) %>% filter(node1 %in% which_nodes |
+                                                           node2 %in% which_nodes)  %>% left_join(split_plot, by = "id"),
+    
     label.padding = unit(0.1, "lines"),
     label.size = 0.1,
     alpha = prop0_alpha,
     colour = "black"
   ) +
+  
+  
   theme_bw() +
   xlab("") +
   ylab("") +
   scale_color_manual(
     "",
-    values = c("black", "red"),
+    values = c(meanColor, sampleColor),
     labels = c("Bootstrap mean", "Sample")
   ) +
-  theme(legend.position = "top") + 
-  scale_alpha(guide = "none") +
   theme(
-    axis.text.y = element_text(size = 9),
+    legend.position = "top",
     strip.background = element_blank(),
-    strip.text.x = element_blank()
-  )
+    strip.text = element_blank()
+  ) +
+  scale_alpha(guide = "none")
 dev.off()
 
 # ---------- Supplementary figure 2 --------------
