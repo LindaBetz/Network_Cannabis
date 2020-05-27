@@ -197,7 +197,11 @@ case_boot <-
 # Particularly for graphs with many nodes, this ensures readability and visability
 
 
-x <- boot_cole_covariates
+x <- edge_boot # the bootnet object we want to plot
+which_nodes <- 1:2 # the nodes, here given as integers 
+n_facets <- 2 # how many "blocks" do we want the plot to be divided in
+
+# some other settings, we leave them mostly at default
 meanVar <- "mean"
 
 minArea <- "q2.5"
@@ -214,8 +218,7 @@ prop0_alpha = 0.8
 rank = F
 meanColor <- bootColor <- "black"
 sampleColor = "red"
-which_nodes <- 1:2 # the nodes, here given as integers 
-n_facets <- 2 # how many blocks
+
 
 # Compute summary stats:
 sumTable <-
@@ -242,19 +245,6 @@ sumTable <- sumTable %>%
 revTable <- function(x)
   x[nrow(x):1, ]
 
-
-#     if (CIstyle == "SE"){
-#       minArea <- "CIlower"
-#       maxArea <- "CIupper"
-#     } else {
-#       minArea <- "q2.5"
-#       maxArea <- "q97.5"
-#     }
-
-# sumTable <- sumTable %>% mutate_(
-#   lbound = ~ifelse(CIstyle[match(type,statistics)] == "SE", CIlower,q2.5),
-#   ubound = ~ifelse(CIstyle[match(type,statistics)] == "SE", CIupper, q97.5)
-# )
 sumTable$lbound <- sumTable[[minArea]]
 sumTable$ubound <- sumTable[[maxArea]]
 
@@ -284,10 +274,6 @@ sumTable2 <- dplyr::bind_rows(
   )
 )
 
-
-#     sumTable <- sumTable[gtools::mixedorder(sumTable$id),]
-#     sumTable$id <- factor(gsub("^(E|N): ","",as.character(sumTable$id)), levels = gsub("^(E|N): ","",unique(gtools::mixedsort(as.character(sumTable$id)))))
-
 gathered_sumTable <-
   tidyr::gather_(sumTable, "var", "value", c("sample", meanVar))
 
@@ -311,11 +297,8 @@ split_plot <- gathered_sumTable %>% arrange(node1, node2) %>%
   distinct(., id, .keep_all=TRUE)
 
 
-
-
-pdf("edge_weights_bootstrapped_CI.pdf", height = 8.27, width =  11.69)
-
 # the acutal plot comes here
+pdf("edge_weights_bootstrapped_CI.pdf", height = 8, width =  8)
 gathered_sumTable %>% arrange(node1, node2) %>%
   filter(node1 %in% which_nodes | node2 %in% which_nodes) %>%
   left_join(split_plot, by = "id") %>%

@@ -42,7 +42,7 @@ X06693_0001_Data <- read_sav("DS0001/06693-0001-Data.sav")
 
 variable_names <- c(
   "age of onset",
-  "cumulative use",
+  "lifetime cumulative frequency",
   "childhood abuse",
   "childhood neglect",
   "urbanicity",
@@ -64,7 +64,7 @@ variable_names <- c(
   "SAW VISIONS",
   "HEARD NOISE/VOICE",
   "SMELLS/BODY ODORS",
-  "FEELNGS IN/ON BODY"
+  "FEELINGS IN/ON BODY"
 ) %>% tolower(.)
 
 
@@ -198,7 +198,6 @@ fade[1, ] <- fade[, 1] <- fade[2, ] <- fade[, 2]  <- FALSE
 
 
 # here, we actually plot the network and save it as a pdf in wd ("main_network.pdf")
-pdf("network.pdf", colormodel = 'cmyk', width = 11, height = 7)
 main_network <- qgraph(
   graph_all$graph,
   layout = lay * -1,
@@ -220,9 +219,8 @@ main_network <- qgraph(
   label.cex = 1.9,
   vsize = 3,
   legend.cex = 0.52,
-  #filename = "main_network",
-  #filetype = "pdf",
+  filename = "main_network",
+  filetype = "pdf",
   edge.width = 0.5,
   nodeNames = variable_names
 )
-dev.off()
