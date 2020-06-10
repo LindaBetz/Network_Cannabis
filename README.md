@@ -13,4 +13,4 @@ There are three files:
 
 Data required for the analysis is available at https://www.icpsr.umich.edu/icpsrweb/:
 
-For optimal reproducibility, we use the R-package "checkpoint", with snapshot date xxxx (R version 3.6.3). Information on how this works can be found at https://mran.microsoft.com/documents/rro/reproducibility.
+For optimal reproducibility, we use the R-package "checkpoint", with snapshot date April 1, 2020 (R version 3.6.3). Information on how this works can be found at https://mran.microsoft.com/documents/rro/reproducibility.
