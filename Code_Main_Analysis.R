@@ -45,7 +45,7 @@ variable_names <- c(
   "lifetime cumulative frequency",
   "childhood abuse",
   "childhood neglect",
-  "urbanicity",
+  "urban upbringing",
   "panic",
   "anxious",
   "sad",
