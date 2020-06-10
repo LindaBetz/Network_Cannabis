@@ -185,7 +185,7 @@ all_lay <- qgraph(
 )$layout
 
 # manually place age of onset & cumulative use in center of network
-all_lay[1,] <- c(0.1,-0.6)
+all_lay[1,] <- c(0.1,-0.5)
 lay <- rbind(c(0.1,-0.3), all_lay)
 
 

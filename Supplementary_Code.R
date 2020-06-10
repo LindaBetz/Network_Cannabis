@@ -42,7 +42,7 @@ X06693_0001_Data <- read_sav("DS0001/06693-0001-Data.sav")
 
 variable_names <- c(
   "age of onset",
-  "cumulative use",
+  "lifetime cumulative frequency",
   "childhood abuse",
   "childhood neglect",
   "urbanicity",
@@ -64,8 +64,9 @@ variable_names <- c(
   "SAW VISIONS",
   "HEARD NOISE/VOICE",
   "SMELLS/BODY ODORS",
-  "FEELNGS IN/ON BODY"
+  "FEELINGS IN/ON BODY"
 ) %>% tolower(.)
+
 
 
 data <- X06693_0001_Data %>%
