@@ -45,7 +45,7 @@ variable_names <- c(
   "lifetime cumulative frequency",
   "childhood abuse",
   "childhood neglect",
-  "urbanicity",
+  "urban upbringing",
   "panic",
   "anxious",
   "sad",
@@ -299,7 +299,6 @@ split_plot <- gathered_sumTable %>% arrange(node1, node2) %>%
   transmute(id, split_plot = -ntile(mean, n_facets)) %>%
   distinct(., id, .keep_all=TRUE)
 
-
 # the acutal plot comes here
 pdf("edge_weights_bootstrapped_CI.pdf", height = 8, width =  8)
 gathered_sumTable %>% arrange(node1, node2) %>%
@@ -371,7 +370,30 @@ only_stable_edges <- gathered_sumTable[c("id", "prop0")] %>%
   distinct() %>%
   select(from, to, weight)
 
+
 # use this information to plot the network and save it as a pdf in wd ("main_network_only_stable_edges.pdf")
+# first, determine layout
+all_lay <- qgraph(
+  graph_all$graph[2:24, 2:24],
+  layout = "spring",
+  repulsion = 0.99,
+  theme = "colorblind"
+)$layout
+
+# manually place age of onset & cumulative use in center of network
+all_lay[1,] <- c(0.1,-0.5)
+lay <- rbind(c(0.1,-0.2), all_lay)
+
+
+# we unfade edges connected to cannabis onset age (1) and cumulative use (2)
+fade <- graph_all$graph < 1
+
+fade[2:ncol(graph_all$graph), ] <-
+  fade[, 2:ncol(graph_all$graph)] <- TRUE
+fade[1, ] <- fade[, 1] <- fade[2, ] <- fade[, 2]  <- FALSE
+
+# acutal plotting & export comes here
+pdf(colormodel="cmyk", width = 7.0, height = 5, file = "main_network_only_stable_edges.pdf")
 qgraph(
   only_stable_edges,
   directed = F,
@@ -379,28 +401,33 @@ qgraph(
   # flip everything because it looks nicer
   fade = ifelse(only_stable_edges$from == 1, FALSE, TRUE),
   trans = TRUE,
-  color = c("#FED439", "#F38D81", "#7FC8F8", "#cad3db"),
+  color = 
+    c("#BEDEC3", "#B9D1FF", "#FFF9F9", "#DADADA"), # color version
+  # c("#b3b3b3", "#d9d9d9", "#f0f0f0", "#FFFFFF"), # greyscale version 
   groups = c(
-    rep("Cannabis Use", 2),
-    rep("Early Risk", 3),
+    rep("Cannabis Use Characteristics", 2),
+    rep("Early Risk Factors", 3),
     rep("Mood", 6),
     rep("Psychosis", 13)
   ),
   theme = "colorblind",
   legend = T,
-  #minimum = 0,
-  #maximum = 0.2,
   cut = 0,
   labels = 1:ncol(data_network),
   GLratio = 1.75,
   label.cex = 1.9,
   vsize = 3,
-  legend.cex = 0.52,
-  filename = "main_network_only_stable_edges",
-  filetype = "pdf",
+  legend.cex = 0.35,
   edge.width = 0.5,
-  nodeNames = variable_names
+  nodeNames = variable_names,
+  # edge.color = "black", # greyscale version only
+  negDashed = TRUE,
+  mar = c(1,1,1,1),
+  layoutScale = c(1.12,1),
+  layoutOffset = c(0.1,0)
+  
 )
+dev.off()
 
 # to keep track: which edges are NOT included in at least 50% of bootstraps?
 gathered_sumTable[c("id", "prop0")] %>%

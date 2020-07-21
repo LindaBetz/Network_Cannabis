@@ -186,7 +186,7 @@ all_lay <- qgraph(
 
 # manually place age of onset & cumulative use in center of network
 all_lay[1,] <- c(0.1,-0.5)
-lay <- rbind(c(0.1,-0.3), all_lay)
+lay <- rbind(c(0.1,-0.2), all_lay)
 
 
 # we unfade edges connected to cannabis onset age (1) and cumulative use (2)
@@ -197,17 +197,21 @@ fade[2:ncol(graph_all$graph), ] <-
 fade[1, ] <- fade[, 1] <- fade[2, ] <- fade[, 2]  <- FALSE
 
 
-# here, we actually plot the network and save it as a pdf in wd ("main_network.pdf")
+# here, we actually plot the network and save it as a pdf in wd ("Figure1.pdf")
+
+pdf(colormodel="cmyk", width = 7.0, height = 5, file = "Figure1.pdf")
 main_network <- qgraph(
   graph_all$graph,
   layout = lay * -1,
   # flip everything because it looks nicer
   fade = fade,
   trans = TRUE,
-  color = c("#FED439", "#F38D81", "#7FC8F8", "#cad3db"),
+  color = 
+  c("#BEDEC3", "#B9D1FF", "#FFF9F9", "#DADADA"), # color version
+  # c("#b3b3b3", "#d9d9d9", "#f0f0f0", "#FFFFFF"), # greyscale version 
   groups = c(
-    rep("Cannabis Use", 2),
-    rep("Early Risk", 3),
+    rep("Cannabis Use Characteristics", 2),
+    rep("Early Risk Factors", 3),
     rep("Mood", 6),
     rep("Psychosis", 13)
   ),
@@ -218,9 +222,14 @@ main_network <- qgraph(
   GLratio = 1.75,
   label.cex = 1.9,
   vsize = 3,
-  legend.cex = 0.52,
-  filename = "main_network",
-  filetype = "pdf",
+  legend.cex = 0.35,
   edge.width = 0.5,
-  nodeNames = variable_names
+  nodeNames = variable_names,
+  # edge.color = "black", # greyscale version only
+  negDashed = TRUE,
+  mar = c(3,3,3,3),
+  layoutScale = c(1.12,1),
+  layoutOffset = c(0,0)
+
 )
+dev.off()
