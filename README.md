@@ -11,6 +11,6 @@ There are three files:
 
 * Weighted_adjacency_matrix.zip provides the weighted adjacency matrix containing the coefficients for the Mixel Graphical Model reported in the paper as a .csv-file.
 
-Data required for the analysis is available at https://www.icpsr.umich.edu/web/ICPSR/studies/6693.
+Data required for the analysis is available for public use at https://www.icpsr.umich.edu/web/ICPSR/studies/6693.
 
 For optimal reproducibility, we use the R-package "checkpoint", with snapshot date April 1, 2020 (R version 3.6.3). Information on how this works can be found at https://mran.microsoft.com/documents/rro/reproducibility.
