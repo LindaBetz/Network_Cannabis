@@ -41,7 +41,7 @@ X06693_0001_Data <- read_sav("DS0001/06693-0001-Data.sav")
 # ---------------------------------- 2: Data preparation & sample descriptives -----------------------------------
 
 variable_names <- c(
-  "age of onset",
+  "age of cannabis use initiation",
   "lifetime cumulative frequency",
   "childhood abuse",
   "childhood neglect",
@@ -149,8 +149,8 @@ data <- X06693_0001_Data %>%
   mutate_at(vars(matches("V41|V3")), ~ recode(.,
                                               `5` = 0))
 
-data_network <- data %>% select(-CASEID)
-colnames(data_network) <- as.character(1:24)
+data_network <- data %>% select(-CASEID) # drop participant ID for network analysis
+colnames(data_network) <- as.character(1:24) # set colnames to numbers for nice plotting
 
 # -------------------------------- 3: Network Estimation ---------------------------------
 
@@ -172,10 +172,12 @@ write.table(
   col.names = F
 )
 # ---------------------------------- 4: Bootstrapping -----------------------------------
-# we bootstrap our model => it takes rather long (~2h per analysis) to run this
-edge_boot <- bootnet(graph_all, nBoots = 1000, nCores = 6)
+# we bootstrap our model 
+# => !! it takes rather long (~2h per analysis on a PC with 16 GB RAM & 6 CPUs ~ 2.2 GHz) to run 
+edge_boot <- bootnet(graph_all, nBoots = 1000, nCores = 6) # parallelization to multiple cores enabled 
 
 
+# => !! it takes rather long (~2h per analysis on a PC with 16 GB RAM & 6 CPUs ~ 2.2 GHz) to run 
 case_boot <-
   bootnet(
     graph_all,
@@ -185,7 +187,7 @@ case_boot <-
     type = "case",
     caseN = 10,
     nCores = 6
-  )
+  ) # parallelization to multiple cores enabled 
 
 # -------------------------------- 5: Plot bootstrap results -------------------------
 # ---------- Supplementary figure 1 --------------
@@ -195,7 +197,7 @@ case_boot <-
 # the following code is an adapation of the "plot.bootnet" function in the bootnet package
 # it allows to split the plot depicting bootstrap confidence intervals for edges
 # into adjacent sub-plots (assuming split0=T)
-# Particularly for graphs with many nodes, this ensures readability and visability
+# particularly for graphs with many nodes, this ensures readability and visability
 
 
 x <- edge_boot # the bootnet object we want to plot
@@ -384,7 +386,7 @@ qgraph(
     rep("Mood", 6),
     rep("Psychosis", 13)
   ),
-  theme = "Borkulo",
+  theme = "colorblind",
   legend = T,
   #minimum = 0,
   #maximum = 0.2,
