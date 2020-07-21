@@ -9,7 +9,7 @@ There are three files:
 
 * Code_Supplementary_Analysis.R provides code to reproduce findings and plots reported in the supplementary file.
 
-* Weighted_adjacency_matrix.zip provides the weighted adjacency matrix containing the coefficients for the Mixel Graphical Model reported in the paper as a .csv-file.
+* The weighted adjacency matrix containing the coefficients for the Mixel Graphical Model reported in the paper as a .csv-file.
 
 Data required for the analysis is available for public use at https://www.icpsr.umich.edu/web/ICPSR/studies/6693.
 
