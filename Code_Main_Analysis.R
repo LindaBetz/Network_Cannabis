@@ -1,12 +1,12 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~     Code for    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 #                                                                                                     #
-#                               Impact of age of onset of cannabis use                                #
-#                                  on expression of psychopathology                                   #
-#                             in the general population: a network view.                              #
+#                               A network approach to relationships                                   #
+#                      between cannabis use characteristics and psychopathology                       #
+#                                       in the general population                                     #
 #                                                                                                     #
 #                                     developed by L. Betz                                            #
 #                                                                                                     #
-#                               - Analysis reported in main manuscript -                              #
+#                              - Analysis reported in main manuscript -                               #
 #                                                                                                     #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 # ---------------------------------- 0: Reproducibility  -----------------------------------
@@ -41,7 +41,7 @@ X06693_0001_Data <- read_sav("DS0001/06693-0001-Data.sav")
 # ---------------------------------- 2: Data preparation & sample descriptives -----------------------------------
 
 variable_names <- c(
-  "age of onset",
+  "age of cannabis use initiation",
   "lifetime cumulative frequency",
   "childhood abuse",
   "childhood neglect",
@@ -162,8 +162,8 @@ data %>%  rename_at(vars(-CASEID), ~ paste0(variable_names)) %>%
 # how many % of participants were excluded due to missing values?
 (2624 - nrow(data)) / 2624 # 0.0304878
 
-data_network <- data %>% select(-CASEID)
-colnames(data_network) <- as.character(1:24)
+data_network <- data %>% select(-CASEID) # drop participant ID for network analysis
+colnames(data_network) <- as.character(1:24) # set colnames to numbers for nice plotting
 
 # ---------------------------------- 3: Network Estimation -----------------------------------
 # we use a mixed graphical model as implemented in mgm-package
@@ -211,7 +211,7 @@ main_network <- qgraph(
     rep("Mood", 6),
     rep("Psychosis", 13)
   ),
-  theme = "Borkulo",
+  theme = "colorblind",
   legend = T,
   cut = 0,
   labels = 1:ncol(data_network),
