@@ -32,7 +32,7 @@ library(mgm)
 library(tidyverse)
 
 
-# the data set is available at https://www.icpsr.umich.edu/icpsrweb/
+# the data set is available for public use at https://www.icpsr.umich.edu/web/ICPSR/studies/6693
 
 # NCS-1
 X06693_0001_Data <- read_sav("DS0001/06693-0001-Data.sav")
@@ -157,13 +157,15 @@ data %>%  rename_at(vars(-CASEID), ~ paste0(variable_names)) %>%
          sex = V13) %>%
   mutate(sex = ifelse(sex == 1, 0, 1)) %>%
   summarise_all(c("mean", "sd")) %>%
-  mutate_all(~ round(., 3))
+  mutate_all( ~ round(., 3))
 
 # how many % of participants were excluded due to missing values?
 (2624 - nrow(data)) / 2624 # 0.0304878
 
-data_network <- data %>% select(-CASEID) # drop participant ID for network analysis
-colnames(data_network) <- as.character(1:24) # set colnames to numbers for nice plotting
+data_network <-
+  data %>% select(-CASEID) # drop participant ID for network analysis
+colnames(data_network) <-
+  as.character(1:24) # set colnames to numbers for nice plotting
 
 # ---------------------------------- 3: Network Estimation -----------------------------------
 # we use a mixed graphical model as implemented in mgm-package
@@ -185,30 +187,36 @@ all_lay <- qgraph(
 )$layout
 
 # manually place age of onset & cumulative use in center of network
-all_lay[1,] <- c(0.1,-0.5)
-lay <- rbind(c(0.1,-0.2), all_lay)
+all_lay[1, ] <- c(0.1, -0.5)
+lay <- rbind(c(0.1, -0.2), all_lay)
 
 
 # we unfade edges connected to cannabis onset age (1) and cumulative use (2)
 fade <- graph_all$graph < 1
 
-fade[2:ncol(graph_all$graph), ] <-
+fade[2:ncol(graph_all$graph),] <-
   fade[, 2:ncol(graph_all$graph)] <- TRUE
-fade[1, ] <- fade[, 1] <- fade[2, ] <- fade[, 2]  <- FALSE
+fade[1,] <- fade[, 1] <- fade[2,] <- fade[, 2]  <- FALSE
 
 
 # here, we actually plot the network and save it as a pdf in wd ("Figure1.pdf")
 
-pdf(colormodel="cmyk", width = 7.0, height = 5, file = "Figure1.pdf")
+pdf(
+  colormodel = "cmyk",
+  width = 7.0,
+  height = 5,
+  file = "Figure1.pdf"
+)
 main_network <- qgraph(
   graph_all$graph,
   layout = lay * -1,
   # flip everything because it looks nicer
   fade = fade,
   trans = TRUE,
-  color = 
-  c("#BEDEC3", "#B9D1FF", "#FFF9F9", "#DADADA"), # color version
-  # c("#b3b3b3", "#d9d9d9", "#f0f0f0", "#FFFFFF"), # greyscale version 
+  color =
+    c("#BEDEC3", "#B9D1FF", "#FFF9F9", "#DADADA"),
+  # color version
+  # c("#b3b3b3", "#d9d9d9", "#f0f0f0", "#FFFFFF"), # greyscale version
   groups = c(
     rep("Cannabis Use Characteristics", 2),
     rep("Early Risk Factors", 3),
@@ -227,9 +235,9 @@ main_network <- qgraph(
   nodeNames = variable_names,
   # edge.color = "black", # greyscale version only
   negDashed = TRUE,
-  mar = c(3,3,3,3),
-  layoutScale = c(1.12,1),
-  layoutOffset = c(0,0)
-
+  mar = c(3, 3, 3, 3),
+  layoutScale = c(1.12, 1),
+  layoutOffset = c(0, 0)
+  
 )
 dev.off()

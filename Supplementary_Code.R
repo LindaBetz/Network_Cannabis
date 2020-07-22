@@ -32,7 +32,7 @@ library(mgm)
 library(tidyverse)
 
 
-# the data set is available at https://www.icpsr.umich.edu/icpsrweb/
+# the data set is available for public use at https://www.icpsr.umich.edu/web/ICPSR/studies/6693
 
 # NCS-1
 X06693_0001_Data <- read_sav("DS0001/06693-0001-Data.sav")
@@ -108,14 +108,12 @@ data <- X06693_0001_Data %>%
     # sad: In your lifetime, have you ever had two weeks or more when nearly every day you felt sad, blue, or depressed?
     V310,
     # loss interest: Has there ever been two weeks or more when you lost interest in most things like work, hobbies, or things you usually liked to do for fun?
-    
-    
     V313,
     # irritable: Has there ever been a period of several days when you were so irritable that you threw or broke things, started arguments, shouted at people, or hit someone?
     V312,
     #mania: Has there ever been a period of at least two days when you were so happy or excited that you got into trouble, or your family or friends worried about it, or a doctor said you were manic?
-    
     V4101,
+    
     # psychotic experiences
     # 3
     V4103,
@@ -149,8 +147,10 @@ data <- X06693_0001_Data %>%
   mutate_at(vars(matches("V41|V3")), ~ recode(.,
                                               `5` = 0))
 
-data_network <- data %>% select(-CASEID) # drop participant ID for network analysis
-colnames(data_network) <- as.character(1:24) # set colnames to numbers for nice plotting
+data_network <-
+  data %>% select(-CASEID) # drop participant ID for network analysis
+colnames(data_network) <-
+  as.character(1:24) # set colnames to numbers for nice plotting
 
 # -------------------------------- 3: Network Estimation ---------------------------------
 
@@ -172,12 +172,13 @@ write.table(
   col.names = F
 )
 # ---------------------------------- 4: Bootstrapping -----------------------------------
-# we bootstrap our model 
-# => !! it takes rather long (~2h per analysis on a PC with 16 GB RAM & 6 CPUs ~ 2.2 GHz) to run 
-edge_boot <- bootnet(graph_all, nBoots = 1000, nCores = 6) # parallelization to multiple cores enabled 
+# we bootstrap our model
+# => !! it takes rather long (~2h per analysis on a PC with 16 GB RAM & 6 CPUs ~ 2.2 GHz) to run
+edge_boot <-
+  bootnet(graph_all, nBoots = 1000, nCores = 6) # parallelization to multiple cores enabled
 
 
-# => !! it takes rather long (~2h per analysis on a PC with 16 GB RAM & 6 CPUs ~ 2.2 GHz) to run 
+# => !! it takes rather long (~2h per analysis on a PC with 16 GB RAM & 6 CPUs ~ 2.2 GHz) to run
 case_boot <-
   bootnet(
     graph_all,
@@ -187,7 +188,7 @@ case_boot <-
     type = "case",
     caseN = 10,
     nCores = 6
-  ) # parallelization to multiple cores enabled 
+  ) # parallelization to multiple cores enabled
 
 # -------------------------------- 5: Plot bootstrap results -------------------------
 # ---------- Supplementary figure 1 --------------
@@ -201,8 +202,9 @@ case_boot <-
 
 
 x <- edge_boot # the bootnet object we want to plot
-which_nodes <- 1:2 # the nodes, here given as integers 
-n_facets <- 2 # how many "blocks" do we want the plot to be divided in
+which_nodes <- 1:2 # the nodes, here given as integers
+n_facets <-
+  2 # how many "blocks" do we want the plot to be divided in
 
 # some other settings, we leave them mostly at default
 meanVar <- "mean"
@@ -229,8 +231,8 @@ sumTable <-
                                                                                      factor(type, levels = statistics))
 
 summary <-
-  sumTable %>% dplyr::group_by_( ~ id) %>% dplyr::summarize_(sample = ~
-                                                               sample[type == statistics[[1]]], mean = as.formula(paste0("~mean(", meanVar, ",na.rm=TRUE)")))
+  sumTable %>% dplyr::group_by_(~ id) %>% dplyr::summarize_(sample = ~
+                                                              sample[type == statistics[[1]]], mean = as.formula(paste0("~mean(", meanVar, ",na.rm=TRUE)")))
 
 summary$order <- order(order(summary$sample, summary$mean))
 
@@ -239,14 +241,14 @@ sumTable <-
 
 # Reorder:
 sumTable <- sumTable %>%
-  dplyr::arrange_( ~ dplyr::row_number(order))  %>%
+  dplyr::arrange_(~ dplyr::row_number(order))  %>%
   dplyr::mutate_(id = ~ gsub("^(E|N): ", "", as.character(id))) %>%
   dplyr::mutate_(id = ~ factor(id, levels = unique(id)))
 
 
 # Some fancy transformation:
 revTable <- function(x)
-  x[nrow(x):1, ]
+  x[nrow(x):1,]
 
 sumTable$lbound <- sumTable[[minArea]]
 sumTable$ubound <- sumTable[[maxArea]]
@@ -297,10 +299,12 @@ sumTable2$alpha <-
 split_plot <- gathered_sumTable %>% arrange(node1, node2) %>%
   filter(node1 %in% which_nodes | node2 %in% which_nodes) %>%
   transmute(id, split_plot = -ntile(mean, n_facets)) %>%
-  distinct(., id, .keep_all=TRUE)
+  distinct(., id, .keep_all = TRUE)
 
 # the acutal plot comes here
-pdf("edge_weights_bootstrapped_CI.pdf", height = 8, width =  8)
+pdf("edge_weights_bootstrapped_CI.pdf",
+    height = 8,
+    width =  8)
 gathered_sumTable %>% arrange(node1, node2) %>%
   filter(node1 %in% which_nodes | node2 %in% which_nodes) %>%
   left_join(split_plot, by = "id") %>%
@@ -310,7 +314,7 @@ gathered_sumTable %>% arrange(node1, node2) %>%
     group = 'id',
     colour = "var"
   )) +
-  facet_wrap( ~ split_plot, scales = "free_y", nrow = 1) +
+  facet_wrap(~ split_plot, scales = "free_y", nrow = 1) +
   
   geom_point(aes_string(alpha = 'alpha'), size = 3) +
   geom_path(
@@ -381,19 +385,24 @@ all_lay <- qgraph(
 )$layout
 
 # manually place age of onset & cumulative use in center of network
-all_lay[1,] <- c(0.1,-0.5)
-lay <- rbind(c(0.1,-0.2), all_lay)
+all_lay[1, ] <- c(0.1, -0.5)
+lay <- rbind(c(0.1, -0.2), all_lay)
 
 
 # we unfade edges connected to cannabis onset age (1) and cumulative use (2)
 fade <- graph_all$graph < 1
 
-fade[2:ncol(graph_all$graph), ] <-
+fade[2:ncol(graph_all$graph),] <-
   fade[, 2:ncol(graph_all$graph)] <- TRUE
-fade[1, ] <- fade[, 1] <- fade[2, ] <- fade[, 2]  <- FALSE
+fade[1,] <- fade[, 1] <- fade[2,] <- fade[, 2]  <- FALSE
 
 # acutal plotting & export comes here
-pdf(colormodel="cmyk", width = 7.0, height = 5, file = "main_network_only_stable_edges.pdf")
+pdf(
+  colormodel = "cmyk",
+  width = 7.0,
+  height = 5,
+  file = "main_network_only_stable_edges.pdf"
+)
 qgraph(
   only_stable_edges,
   directed = F,
@@ -401,9 +410,10 @@ qgraph(
   # flip everything because it looks nicer
   fade = ifelse(only_stable_edges$from == 1, FALSE, TRUE),
   trans = TRUE,
-  color = 
-    c("#BEDEC3", "#B9D1FF", "#FFF9F9", "#DADADA"), # color version
-  # c("#b3b3b3", "#d9d9d9", "#f0f0f0", "#FFFFFF"), # greyscale version 
+  color =
+    c("#BEDEC3", "#B9D1FF", "#FFF9F9", "#DADADA"),
+  # color version
+  # c("#b3b3b3", "#d9d9d9", "#f0f0f0", "#FFFFFF"), # greyscale version
   groups = c(
     rep("Cannabis Use Characteristics", 2),
     rep("Early Risk Factors", 3),
@@ -422,9 +432,9 @@ qgraph(
   nodeNames = variable_names,
   # edge.color = "black", # greyscale version only
   negDashed = TRUE,
-  mar = c(1,1,1,1),
-  layoutScale = c(1.12,1),
-  layoutOffset = c(0.1,0)
+  mar = c(1, 1, 1, 1),
+  layoutScale = c(1.12, 1),
+  layoutOffset = c(0.1, 0)
   
 )
 dev.off()
