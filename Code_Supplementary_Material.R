@@ -175,7 +175,7 @@ write.table(
 # we bootstrap our model
 # => !! it takes rather long (~2h per analysis on a PC with 16 GB RAM & 6 CPUs ~ 2.2 GHz) to run
 edge_boot <-
-  bootnet(graph_all, nBoots = 1000, nCores = 6) # parallelization to multiple cores enabled
+  bootnet(graph_all, nBoots = 100, nCores = 6) # parallelization to multiple cores enabled
 
 
 # => !! it takes rather long (~2h per analysis on a PC with 16 GB RAM & 6 CPUs ~ 2.2 GHz) to run
@@ -302,7 +302,7 @@ split_plot <- gathered_sumTable %>% arrange(node1, node2) %>%
   distinct(., id, .keep_all = TRUE)
 
 # the acutal plot comes here
-pdf("edge_weights_bootstrapped_CI.pdf",
+pdf("Supplementary_FigureS1.pdf",
     height = 8,
     width =  8)
 gathered_sumTable %>% arrange(node1, node2) %>%
@@ -357,8 +357,10 @@ gathered_sumTable %>% arrange(node1, node2) %>%
   scale_alpha(guide = "none")
 dev.off()
 
+
 # ---------- Supplementary figure 2 --------------
 # plot a network in which only stable connections (>50% of bootstraps) are contained
+main_network <- qgraph(graph_all$graph, DoNotPlot = TRUE)
 
 # first, filter out connections that are not stable by this criterion
 only_stable_edges <- gathered_sumTable[c("id", "prop0")] %>%
@@ -375,7 +377,7 @@ only_stable_edges <- gathered_sumTable[c("id", "prop0")] %>%
   select(from, to, weight)
 
 
-# use this information to plot the network and save it as a pdf in wd ("main_network_only_stable_edges.pdf")
+# use this information to plot the network and save it as a pdf in wd ("Supplementary_FigureS2.pdf")
 # first, determine layout
 all_lay <- qgraph(
   graph_all$graph[2:24, 2:24],
@@ -401,7 +403,7 @@ pdf(
   colormodel = "cmyk",
   width = 7.0,
   height = 5,
-  file = "main_network_only_stable_edges.pdf"
+  file = "Supplementary_FigureS2.pdf"
 )
 qgraph(
   only_stable_edges,
@@ -456,7 +458,7 @@ gathered_sumTable[c("id", "prop0")] %>%
 
 # ---------- Supplementary figure 3 --------------
 # edge weight case-dropping bootstrap
-pdf("case_drop_bootstrap.pdf",
+pdf("Supplementary_FigureS3.pdf",
     width = 7,
     height = 5)
 plot(case_boot, statistics = "edge")
