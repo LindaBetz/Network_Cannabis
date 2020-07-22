@@ -177,7 +177,7 @@ graph_all <- estimateNetwork(
   rule = "OR"
 )
 
-# ---------------------------------- 4: Plotting the Network -----------------------------------
+# ---------------------------------- 4: Plotting the Network (Figure 1) -----------------------------------
 # compute layout with all variables except age of onset
 all_lay <- qgraph(
   graph_all$graph[2:24, 2:24],
