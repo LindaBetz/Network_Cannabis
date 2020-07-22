@@ -235,7 +235,7 @@ main_network <- qgraph(
   nodeNames = variable_names,
   # edge.color = "black", # greyscale version only
   negDashed = TRUE,
-  mar = c(3, 3, 3, 3),
+  mar = c(4, 4, 4, 4),
   layoutScale = c(1.12, 1),
   layoutOffset = c(0, 0)
   
