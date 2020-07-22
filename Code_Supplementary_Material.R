@@ -175,7 +175,7 @@ write.table(
 # we bootstrap our model
 # => !! it takes rather long (~2h per analysis on a PC with 16 GB RAM & 6 CPUs ~ 2.2 GHz) to run
 edge_boot <-
-  bootnet(graph_all, nBoots = 100, nCores = 6) # parallelization to multiple cores enabled
+  bootnet(graph_all, nBoots = 1000, nCores = 6) # parallelization to multiple cores enabled
 
 
 # => !! it takes rather long (~2h per analysis on a PC with 16 GB RAM & 6 CPUs ~ 2.2 GHz) to run
