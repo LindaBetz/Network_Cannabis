@@ -1,12 +1,12 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~     Code for    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 #                                                                                                     #
-#                               Impact of age of onset of cannabis use                                #
-#                                  on expression of psychopathology                                   #
-#                             in the general population: a network view.                              #
+#                               A network approach to relationships                                   #
+#                      between cannabis use characteristics and psychopathology                       #
+#                                       in the general population                                     #
 #                                                                                                     #
 #                                     developed by L. Betz                                            #
 #                                                                                                     #
-#                               - Analysis reported in supplement -                                   #
+#                         - Analysis reported in supplementary materials -                            #
 #                                                                                                     #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 # ---------------------------------- 0: Reproducibility  -----------------------------------
