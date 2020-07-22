@@ -1,4 +1,4 @@
-# Network Cannabis Use Characteristics
+# Network of Cannabis Use Characteristics & Psychopathology
 R-code to reproduce analyses described in "A network approach to relationships between cannabis use characteristics and psychopathology in the general population" by Linda T. Betz, Nora Penzel, Joseph Kambeitz.  
 
 Code by L. Betz (linda.betz@uk-koeln.de)
