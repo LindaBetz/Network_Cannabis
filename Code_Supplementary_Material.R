@@ -6,7 +6,7 @@
 #                                                                                                     #
 #                                     developed by L. Betz                                            #
 #                                                                                                     #
-#                         - Analysis reported in supplementary materials -                            #
+#                         - Analysis reported in Supplementary Material -                             #
 #                                                                                                     #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 # ---------------------------------- 0: Reproducibility  -----------------------------------
