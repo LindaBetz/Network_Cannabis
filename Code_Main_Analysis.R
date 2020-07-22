@@ -107,13 +107,10 @@ data <- X06693_0001_Data %>%
     # sad: In your lifetime, have you ever had two weeks or more when nearly every day you felt sad, blue, or depressed?
     V310,
     # loss interest: Has there ever been two weeks or more when you lost interest in most things like work, hobbies, or things you usually liked to do for fun?
-    
-    
     V313,
     # irritable: Has there ever been a period of several days when you were so irritable that you threw or broke things, started arguments, shouted at people, or hit someone?
     V312,
     #mania: Has there ever been a period of at least two days when you were so happy or excited that you got into trouble, or your family or friends worried about it, or a doctor said you were manic?
-    
     V4101,
     # psychotic experiences
     # 3
@@ -140,7 +137,6 @@ data <- X06693_0001_Data %>%
     V4133,
     # 14
     V4135 # 15
-    
   ) %>%
   select(-c(molested, raped, physical_abuse)) %>% # drop these variables
   na.omit() %>% # only complete cases, as network estimator does not allow missings
@@ -201,7 +197,6 @@ fade[1,] <- fade[, 1] <- fade[2,] <- fade[, 2]  <- FALSE
 
 
 # here, we actually plot the network and save it as a pdf in wd ("Figure1.pdf")
-
 pdf(
   colormodel = "cmyk",
   width = 7.0,
@@ -239,6 +234,5 @@ main_network <- qgraph(
   mar = c(4, 4, 4, 4),
   layoutScale = c(1.12, 1),
   layoutOffset = c(0, 0)
-  
 )
 dev.off()

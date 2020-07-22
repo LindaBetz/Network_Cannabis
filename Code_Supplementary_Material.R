@@ -191,7 +191,7 @@ case_boot <-
   ) # parallelization to multiple cores enabled
 
 # -------------------------------- 5: Plot bootstrap results -------------------------
-# ---------- Supplementary figure 1 --------------
+# -------------- Supplementary figure 1 --------------
 # 95% CI for edge weights obtained from bootstrapping
 
 # NOTE:
@@ -358,7 +358,7 @@ gathered_sumTable %>% arrange(node1, node2) %>%
 dev.off()
 
 
-# ---------- Supplementary figure 2 --------------
+# -------------------- Supplementary figure 2 ------------------------
 # plot a network in which only stable connections (>50% of bootstraps) are contained
 main_network <- qgraph(graph_all$graph, DoNotPlot = TRUE)
 
@@ -434,10 +434,9 @@ qgraph(
   nodeNames = variable_names,
   # edge.color = "black", # greyscale version only
   negDashed = TRUE,
-  mar = c(1, 1, 1, 1),
+  mar = c(4, 4, 4, 4),
   layoutScale = c(1.12, 1),
-  layoutOffset = c(0.1, 0)
-  
+  layoutOffset = c(0, 0)
 )
 dev.off()
 
@@ -456,7 +455,7 @@ gathered_sumTable[c("id", "prop0")] %>%
   distinct() %>%
   select(from, to, weight)
 
-# ---------- Supplementary figure 3 --------------
+# ------------------- Supplementary figure 3 -----------------------
 # edge weight case-dropping bootstrap
 pdf("Supplementary_FigureS3.pdf",
     width = 7,
