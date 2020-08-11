@@ -400,6 +400,7 @@ fade[1,] <- fade[, 1] <- fade[2,] <- fade[, 2]  <- FALSE
 
 # acutal plotting & export comes here
 pdf(
+  colormodel = "cmyk",
   width = 7.0,
   height = 5,
   file = "Supplementary_FigureS2.pdf"
@@ -421,7 +422,7 @@ qgraph(
     rep("Mood", 6),
     rep("Psychosis", 13)
   ),
-  theme = "Borkulo",
+  theme = "colorblind",
   legend = T,
   cut = 0,
   labels = 1:ncol(data_network),
