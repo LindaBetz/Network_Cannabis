@@ -198,7 +198,6 @@ fade[1,] <- fade[, 1] <- fade[2,] <- fade[, 2]  <- FALSE
 
 # here, we actually plot the network and save it as a pdf in wd ("Figure1.pdf")
 pdf(
-  colormodel = "cmyk",
   width = 7.0,
   height = 5,
   file = "Figure1.pdf"
@@ -219,7 +218,7 @@ main_network <- qgraph(
     rep("Mood", 6),
     rep("Psychosis", 13)
   ),
-  theme = "colorblind",
+  theme = "Borkulo",
   legend = T,
   cut = 0,
   labels = 1:ncol(data_network),
