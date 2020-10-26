@@ -19,18 +19,21 @@
 
 library(checkpoint)
 checkpoint(
-  snapshotDate = "2020-04-01",
-  R.version = "3.6.3",
+  snapshotDate = "2020-10-23",
+  R.version = "4.0.3",
   checkpointLocation = tempdir()
 )
 
+# MissMech is not available on CRAN currently - install archived version via devtools
+devtools::install_version("MissMech",version = "1.0.2")
+
 # ---------------------------------- 1: Load packages & data -----------------------------------
+library(MissMech)
 library(haven)
 library(qgraph)
 library(bootnet)
 library(mgm)
 library(tidyverse)
-
 
 # the data set is available for public use at https://www.icpsr.umich.edu/web/ICPSR/studies/6693
 
@@ -139,14 +142,20 @@ data <- X06693_0001_Data %>%
     V4135 # 15
   ) %>%
   select(-c(molested, raped, physical_abuse)) %>% # drop these variables
-  na.omit() %>% # only complete cases, as network estimator does not allow missings
   mutate_all(as.numeric) %>%
   mutate_at(vars(matches("V41|V3")), ~ recode(.,
                                               `5` = 0))
 
+# test missing completely at random (MCAR) assumption
+TestMCARNormality(data = data) # 0.7130785 => missings likely MCAR, complete case analysis ok
+
+data <- data %>% na.omit() # only complete cases, as network estimator does not allow missing
+
+# how many % of participants were excluded due to missing values?
+(2624 - nrow(data)) / 2624 # 0.0304878 => ~3.0%
 
 # get descriptives for sample
-data %>%  rename_at(vars(-CASEID), ~ paste0(variable_names)) %>%
+data %>% rename_at(vars(-CASEID), ~ paste0(variable_names)) %>%
   left_join(X06693_0001_Data[c("CASEID", "V12", "V13")] %>% mutate_all(as.numeric), by =
               "CASEID") %>%
   rename(age = V12,
@@ -155,8 +164,6 @@ data %>%  rename_at(vars(-CASEID), ~ paste0(variable_names)) %>%
   summarise_all(c("mean", "sd")) %>%
   mutate_all( ~ round(., 3))
 
-# how many % of participants were excluded due to missing values?
-(2624 - nrow(data)) / 2624 # 0.0304878 => 3.0%
 
 data_network <-
   data %>% select(-CASEID) # drop participant ID for network analysis
@@ -168,10 +175,12 @@ colnames(data_network) <-
 graph_all <- estimateNetwork(
   data_network,
   default = "mgm",
+  type = c(rep("g", 2), rep("c", 22)),
+  level = c(rep(1, 2), rep(2, 22)),
   criterion = "EBIC",
-  tuning = 0,
-  rule = "OR"
-)
+  tuning = 0, # mgm default
+  rule = "OR")
+
 
 # ---------------------------------- 4: Plotting the Network (Figure 1) -----------------------------------
 # compute layout with all variables except age of cannabis use initiation
@@ -236,3 +245,70 @@ main_network <- qgraph(
   layoutOffset = c(0, 0)
 )
 dev.off()
+
+# ------------------- Moderation analysis by sex -----------------------
+data_sex <-
+  data %>% rename_at(vars(-CASEID), ~ paste0(variable_names)) %>%
+  left_join(X06693_0001_Data[c("CASEID", "V12", "V13")] %>% mutate_all(as.numeric), by =
+              "CASEID") %>%
+  rename(age = V12,
+         sex = V13) %>%
+  mutate(sex = ifelse(sex == 1, 0, 1)) %>%
+  select(-CASEID, -age) %>%
+  na.omit() %>%
+  mutate_all(as.numeric) %>%
+  mutate_all(~ recode(.,       `5` = 0))
+
+
+set.seed(1)
+mgm_mod <- mgm(
+  data = data_sex %>% as.matrix(), # convert to matrix, otherwise resampling doesn't work
+  lambdaSel = "EBIC",
+  type = c(rep("g", 2), rep("c", 23)),
+  level = c(rep(1, 2), rep(2, 23)),
+  lambdaGam = 0,
+  ruleReg = "OR",
+  moderators = 25,
+  threshold = "none",
+  pbar = FALSE,
+  binarySign = TRUE
+)
+
+
+# node 1: frequency of use
+interaction_effects_node_1 <- c()
+
+j = 1
+for (i in seq(from = 2, to = 24, by = 1)) {
+  interaction_effects_node_1[j] <-
+    showInteraction(mgm_mod, int = c(1, i, 25))$edgeweight
+  j = j + 1
+}
+
+interaction_effects_node_1 # no interaction effects present
+
+# node 2: onset age
+interaction_effects_node_2 <- c()
+j = 1
+for (i in seq(from = 3, to = 24, by = 1)) {
+  interaction_effects_node_2[j] <-
+    showInteraction(mgm_mod, int = c(2, i, 25))$edgeweight
+  j = j + 1
+}
+
+interaction_effects_node_2 # one moderation effect 
+# (connection: childhood neglect--onset age of cannabis use)
+
+# bootstrap results to see if this moderation effect is stable
+# !! takes long to run on a standard PC (~ 8-9h)
+set.seed(1)
+mgm_resampled <-
+  resample(mgm_mod, data = data_sex %>% as.matrix(), nB = 1000)
+
+plotRes(
+  mgm_resampled,
+  cut = 186:188,
+  lwd.qtl = 2,
+  axis.ticks = c(-0.05, 0, 0.05)
+)
+# effect is not stable, 0 contained in 95% CI
