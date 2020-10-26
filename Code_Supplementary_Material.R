@@ -19,8 +19,8 @@
 
 library(checkpoint)
 checkpoint(
-  snapshotDate = "2020-04-01",
-  R.version = "3.6.3",
+  snapshotDate = "2020-10-23",
+  R.version = "4.0.3",
   checkpointLocation = tempdir()
 )
 
@@ -158,8 +158,11 @@ colnames(data_network) <-
 graph_all <- estimateNetwork(
   data_network,
   default = "mgm",
+  type = c(rep("g", 2), rep("c", 22)),
+  level = c(rep(1, 2), rep(2, 22)),
   criterion = "EBIC",
-  tuning = 0,
+  tuning = 0.25,
+  # mgm default
   rule = "OR"
 )
 
@@ -463,4 +466,65 @@ pdf("Supplementary_FigureS3.pdf",
 plot(case_boot, statistics = "edge")
 dev.off()
 
+
 corStability(case_boot) # 0.672 for edge
+
+# -------------------------------- 6: Network across range of gamma -------------------------
+# ------------------- Supplementary figure 4 -----------------------
+# first, estimate network from gamma = 0 to gamma = 0.25 in steps of 0.05
+networks_lambda <- map(
+  seq(0, 0.25, 0.05),
+  ~ estimateNetwork(
+    data_network,
+    default = "mgm",
+    type = c(rep("g", 2), rep("c", 22)),
+    level = c(rep(1, 2), rep(2, 22)),
+    criterion = "EBIC",
+    tuning = .,
+    rule = "OR"
+  )$graph
+)
+
+# plot & save networks
+pdf(
+  colormodel = "cmyk",
+  width = 7,
+  height = 5.5,
+  file = "Supplementary_FigureS4.pdf"
+)
+par(mfrow = c(2, 3))
+for (i in 1:6)
+  qgraph(
+    networks_lambda[[i]],
+    layout = lay * -1,
+    # flip everything because it looks nicer
+    fade = fade,
+    trans = TRUE,
+    color =
+      c("#BEDEC3", "#B9D1FF", "#FFF9F9", "#DADADA"),
+    # color version
+    # c("#b3b3b3", "#d9d9d9", "#f0f0f0", "#FFFFFF"), # greyscale version
+    groups = c(
+      rep("Cannabis Use Characteristics", 2),
+      rep("Early Risk Factors", 3),
+      rep("Mood", 6),
+      rep("Psychosis", 13)
+    ),
+    theme = "colorblind",
+    legend = F,
+    cut = 0,
+    labels = 1:ncol(data_network),
+    GLratio = 1.75,
+    label.cex = 1.9,
+    vsize = 7,
+    legend.cex = 0.35,
+    edge.width = 1,
+    nodeNames = variable_names,
+    # edge.color = "black", # greyscale version only
+    negDashed = TRUE,
+    title = paste0("                       gamma = ", seq(0, 0.25, 0.05)[i]),
+    mar = c(4, 4, 4, 4),
+    layoutScale = c(1.12, 1),
+    layoutOffset = c(0, 0)
+  )
+dev.off()
