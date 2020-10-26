@@ -13,4 +13,4 @@ There are three files:
 
 Data required for the analysis (National Comorbidity Survey Data; NCS-1) are available for public use at https://www.icpsr.umich.edu/web/ICPSR/studies/6693.
 
-For optimal reproducibility, we use the R-package "checkpoint", with snapshot date April 1, 2020 (R version 3.6.3). Information on how this works can be found at https://mran.microsoft.com/documents/rro/reproducibility.
+For optimal reproducibility, we use the R-package "checkpoint", with snapshot date October 23, 2020 (R version 4.0.3). Information on how this works can be found at https://mran.microsoft.com/documents/rro/reproducibility.
