@@ -161,8 +161,7 @@ graph_all <- estimateNetwork(
   type = c(rep("g", 2), rep("c", 22)),
   level = c(rep(1, 2), rep(2, 22)),
   criterion = "EBIC",
-  tuning = 0.25,
-  # mgm default
+  tuning = 0,
   rule = "OR"
 )
 
