@@ -25,7 +25,7 @@ checkpoint(
 )
 
 # MissMech is not available on CRAN currently - install archived version via devtools
-devtools::install_version("MissMech",version = "1.0.2")
+devtools::install_version("MissMech", version = "1.0.2")
 
 # ---------------------------------- 1: Load packages & data -----------------------------------
 library(MissMech)
@@ -149,7 +149,8 @@ data <- X06693_0001_Data %>%
 # test missing completely at random (MCAR) assumption
 TestMCARNormality(data = data) # 0.7130785 => missings likely MCAR, complete case analysis ok
 
-data <- data %>% na.omit() # only complete cases, as network estimator does not allow missing
+data <-
+  data %>% na.omit() # only complete cases, as network estimator does not allow missing
 
 # how many % of participants were excluded due to missing values?
 (2624 - nrow(data)) / 2624 # 0.0304878 => ~3.0%
@@ -162,7 +163,7 @@ data %>% rename_at(vars(-CASEID), ~ paste0(variable_names)) %>%
          sex = V13) %>%
   mutate(sex = ifelse(sex == 1, 0, 1)) %>%
   summarise_all(c("mean", "sd")) %>%
-  mutate_all( ~ round(., 3))
+  mutate_all(~ round(., 3))
 
 
 data_network <-
@@ -178,8 +179,9 @@ graph_all <- estimateNetwork(
   type = c(rep("g", 2), rep("c", 22)),
   level = c(rep(1, 2), rep(2, 22)),
   criterion = "EBIC",
-  tuning = 0, # mgm default
-  rule = "OR")
+  tuning = 0,
+  rule = "OR"
+)
 
 
 # ---------------------------------- 4: Plotting the Network (Figure 1) -----------------------------------
@@ -188,21 +190,21 @@ all_lay <- qgraph(
   graph_all$graph[2:24, 2:24],
   layout = "spring",
   repulsion = 0.99,
-  theme = "colorblind", 
+  theme = "colorblind",
   DoNotPlot = TRUE
 )$layout
 
 # manually place age of cannabis use initiation & cumulative use in center of network
-all_lay[1, ] <- c(0.1, -0.5)
-lay <- rbind(c(0.1, -0.2), all_lay)
+all_lay[1,] <- c(0.1,-0.5)
+lay <- rbind(c(0.1,-0.2), all_lay)
 
 
 # we unfade edges connected to age of cannabis use initiation (1) and cumulative use (2)
 fade <- graph_all$graph < 1
 
-fade[2:ncol(graph_all$graph),] <-
+fade[2:ncol(graph_all$graph), ] <-
   fade[, 2:ncol(graph_all$graph)] <- TRUE
-fade[1,] <- fade[, 1] <- fade[2,] <- fade[, 2]  <- FALSE
+fade[1, ] <- fade[, 1] <- fade[2, ] <- fade[, 2]  <- FALSE
 
 
 # here, we actually plot the network and save it as a pdf in wd ("Figure1.pdf")
@@ -254,15 +256,16 @@ data_sex <-
   rename(age = V12,
          sex = V13) %>%
   mutate(sex = ifelse(sex == 1, 0, 1)) %>%
-  select(-CASEID, -age) %>%
+  select(-CASEID,-age) %>%
   na.omit() %>%
   mutate_all(as.numeric) %>%
-  mutate_all(~ recode(.,       `5` = 0))
+  mutate_all( ~ recode(.,       `5` = 0))
 
 
 set.seed(1)
 mgm_mod <- mgm(
-  data = data_sex %>% as.matrix(), # convert to matrix, otherwise resampling doesn't work
+  data = data_sex %>% as.matrix(),
+  # convert to matrix, otherwise resampling doesn't work
   lambdaSel = "EBIC",
   type = c(rep("g", 2), rep("c", 23)),
   level = c(rep(1, 2), rep(2, 23)),
@@ -275,40 +278,40 @@ mgm_mod <- mgm(
 )
 
 
-# node 1: frequency of use
-interaction_effects_node_1 <- c()
+# node 1: age of cannabis use initiation
+moderation_effects_node_1 <- c()
 
 j = 1
 for (i in seq(from = 2, to = 24, by = 1)) {
-  interaction_effects_node_1[j] <-
+  moderation_effects_node_1[j] <-
     showInteraction(mgm_mod, int = c(1, i, 25))$edgeweight
   j = j + 1
 }
 
-interaction_effects_node_1 # no interaction effects present
+data.frame(effect = moderation_effects_node_1, node = 2:24) # no moderation effects
 
-# node 2: onset age
-interaction_effects_node_2 <- c()
+# node 2: frequency of use
+moderation_effects_node_2 <- c()
 j = 1
 for (i in seq(from = 3, to = 24, by = 1)) {
-  interaction_effects_node_2[j] <-
+  moderation_effects_node_2[j] <-
     showInteraction(mgm_mod, int = c(2, i, 25))$edgeweight
   j = j + 1
 }
 
-interaction_effects_node_2 # one moderation effect 
-# (connection: childhood neglect--onset age of cannabis use)
+data.frame(effect = moderation_effects_node_2, node = 3:24) # one moderation effect
+# (connection: urbanicity--frequency of cannabis use => stronger in women)
 
 # bootstrap results to see if this moderation effect is stable
 # !! takes long to run on a standard PC (~ 8-9h)
 set.seed(1)
 mgm_resampled <-
-  resample(mgm_mod, data = data_sex %>% as.matrix(), nB = 1000)
+  resample(mgm_mod, data = data_sex %>% as.matrix(), nB = 10)
 
 plotRes(
   mgm_resampled,
-  cut = 186:188,
+  cut = 188:189,
   lwd.qtl = 2,
   axis.ticks = c(-0.05, 0, 0.05)
 )
-# effect is not stable, 0 contained in 95% CI
+# effect is not stable, 0 contained in 95% CI (upper effect plotted)
