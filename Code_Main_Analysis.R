@@ -306,7 +306,7 @@ data.frame(effect = moderation_effects_node_2, node = 3:24) # one moderation eff
 # !! takes long to run on a standard PC (~ 8-9h)
 set.seed(1)
 mgm_resampled <-
-  resample(mgm_mod, data = data_sex %>% as.matrix(), nB = 10)
+  resample(mgm_mod, data = data_sex %>% as.matrix(), nB = 1000)
 
 plotRes(
   mgm_resampled,
