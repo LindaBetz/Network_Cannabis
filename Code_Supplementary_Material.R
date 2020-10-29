@@ -388,12 +388,12 @@ all_lay <- qgraph(
   theme = "colorblind"
 )$layout
 
-# manually place age of onset & cumulative use in center of network
+# manually place age of cannabis use initation & cumulative use in center of network
 all_lay[1, ] <- c(0.1, -0.5)
 lay <- rbind(c(0.1, -0.2), all_lay)
 
 
-# we unfade edges connected to cannabis onset age (1) and cumulative use (2)
+# we unfade edges connected to age of cannabis use initation (1) and cumulative use (2)
 fade <- graph_all$graph < 1
 
 fade[2:ncol(graph_all$graph),] <-
