@@ -1,15 +1,19 @@
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~     Code for    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#                                                                                                     #
-#                               A network approach to relationships                                   #
-#                      between cannabis use characteristics and psychopathology                       #
-#                                       in the general population                                     #
-#                                                                                                     #
-#                                     developed by L. Betz                                            #
-#                                                                                                     #
-#                              - Analysis reported in main manuscript -                               #
-#                                                                                                     #
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-# ---------------------------------- 0: Reproducibility  -----------------------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~     Code for     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+#                                                                            #
+#                 A network approach to relationships                        #
+#        between cannabis use characteristics and psychopathology            #
+#                         in the general population                          #
+#                                                                            #
+#                   Linda Betz, Nora Penzel, Joseph Kambeitz                 #
+#                                                                            #
+#                                                                            #
+#                         Analysis/code by Linda Betz                        #
+#                                                                            #
+#                   - Analysis reported in Main Manuscript -                 #
+#                                                                            #
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+# --------------------------- 0: Reproducibility  -------------------------------
 
 # for reproducibility, we use the "checkpoint" package
 # in a temporal directory, it will *install* those package versions used when the script was written
@@ -27,7 +31,7 @@ checkpoint(
 # MissMech is not available on CRAN currently - install archived version via devtools
 devtools::install_version("MissMech", version = "1.0.2")
 
-# ---------------------------------- 1: Load packages & data -----------------------------------
+# ---------------------------- 1: Load packages & data -------------------------
 library(MissMech)
 library(haven)
 library(qgraph)
@@ -41,7 +45,7 @@ library(tidyverse)
 X06693_0001_Data <- read_sav("DS0001/06693-0001-Data.sav")
 
 
-# ---------------------------------- 2: Data preparation & sample descriptives -----------------------------------
+# ------------------- 2: Data preparation & sample descriptives ----------------
 
 variable_names <- c(
   "age of cannabis use initiation",
@@ -179,7 +183,7 @@ data %>% rename_at(vars(-CASEID), ~ paste0(variable_names)) %>%
          sex = V13) %>%
   mutate(sex = ifelse(sex == 1, 0, 1)) %>%
   summarise_all(c("mean", "sd")) %>%
-  mutate_all( ~ round(., 3))
+  mutate_all(~ round(., 3))
 
 
 data_network <-
@@ -187,7 +191,8 @@ data_network <-
 colnames(data_network) <-
   as.character(1:24) # set colnames to numbers for nice plotting
 
-# ---------------------------------- 3: Network Estimation -----------------------------------
+# -------------------------- 3: Network Estimation -----------------------------
+
 # we use a mixed graphical model as implemented in mgm-package
 graph_all <- estimateNetwork(
   data_network,
@@ -200,7 +205,8 @@ graph_all <- estimateNetwork(
 )
 
 
-# ---------------------------------- 4: Plotting the Network (Figure 1) -----------------------------------
+# -------------------- 4: Plotting the Network (Figure 1) ----------------------
+
 # compute layout with all variables except age of cannabis use initiation
 all_lay <- qgraph(
   graph_all$graph[2:24, 2:24],
@@ -211,16 +217,16 @@ all_lay <- qgraph(
 )$layout
 
 # manually place age of cannabis use initiation & cumulative use in center of network
-all_lay[1, ] <- c(0.1, -0.5)
-lay <- rbind(c(0.1, -0.2), all_lay)
+all_lay[1,] <- c(0.1,-0.5)
+lay <- rbind(c(0.1,-0.2), all_lay)
 
 
 # we unfade edges connected to age of cannabis use initiation (1) and cumulative use (2)
 fade <- graph_all$graph < 1
 
-fade[2:ncol(graph_all$graph),] <-
+fade[2:ncol(graph_all$graph), ] <-
   fade[, 2:ncol(graph_all$graph)] <- TRUE
-fade[1,] <- fade[, 1] <- fade[2,] <- fade[, 2]  <- FALSE
+fade[1, ] <- fade[, 1] <- fade[2, ] <- fade[, 2]  <- FALSE
 
 
 # here, we actually plot the network and save it as a pdf in wd ("Figure1.pdf")
@@ -264,7 +270,7 @@ main_network <- qgraph(
 )
 dev.off()
 
-# ------------------- 5: Moderation analysis by sex -----------------------
+# ---------------------- 5: Moderation analysis by sex -------------------------
 data_sex <-
   data %>% rename_at(vars(-CASEID), ~ paste0(variable_names)) %>%
   left_join(X06693_0001_Data[c("CASEID", "V12", "V13")] %>% mutate_all(as.numeric), by =
@@ -272,10 +278,10 @@ data_sex <-
   rename(age = V12,
          sex = V13) %>%
   mutate(sex = ifelse(sex == 1, 0, 1)) %>%
-  select(-CASEID, -age) %>%
+  select(-CASEID,-age) %>%
   na.omit() %>%
   mutate_all(as.numeric) %>%
-  mutate_all(~ recode(.,       `5` = 0))
+  mutate_all( ~ recode(.,       `5` = 0))
 
 
 set.seed(1)

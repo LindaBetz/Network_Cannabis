@@ -1,15 +1,19 @@
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~     Code for    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-#                                                                                                     #
-#                               A network approach to relationships                                   #
-#                      between cannabis use characteristics and psychopathology                       #
-#                                       in the general population                                     #
-#                                                                                                     #
-#                                     developed by L. Betz                                            #
-#                                                                                                     #
-#                         - Analysis reported in Supplementary Material -                             #
-#                                                                                                     #
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-# ---------------------------------- 0: Reproducibility  -----------------------------------
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~     Code for     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+#                                                                            #
+#                 A network approach to relationships                        #
+#        between cannabis use characteristics and psychopathology            #
+#                         in the general population                          #
+#                                                                            #
+#                   Linda Betz, Nora Penzel, Joseph Kambeitz                 #
+#                                                                            #
+#                                                                            #
+#                         Analysis/code by Linda Betz                        #
+#                                                                            #
+#                - Analysis reported in Supplementary Material -             #
+#                                                                            #
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+# --------------------------- 0: Reproducibility  -------------------------------
 
 # for reproducibility, we use the "checkpoint" package
 # in a temporal directory, it will *install* those package versions used when the script was written
@@ -24,7 +28,7 @@ checkpoint(
   checkpointLocation = tempdir()
 )
 
-# ---------------------------------- 1: Load packages & data -----------------------------------
+# ---------------------------- 1: Load packages & data -------------------------
 library(haven)
 library(qgraph)
 library(bootnet)
@@ -38,7 +42,7 @@ library(tidyverse)
 X06693_0001_Data <- read_sav("DS0001/06693-0001-Data.sav")
 
 
-# ---------------------------------- 2: Data preparation & sample descriptives -----------------------------------
+# ---------------------------- 2: Data preparation -----------------------------
 
 variable_names <- c(
   "age of cannabis use initiation",
@@ -165,7 +169,7 @@ data_network <-
 colnames(data_network) <-
   as.character(1:24) # set colnames to numbers for nice plotting
 
-# -------------------------------- 3: Network Estimation ---------------------------------
+# -------------------------- 3: Network Estimation -----------------------------
 
 # we use a mixed graphical model as implemented in mgm-package
 graph_all <- estimateNetwork(
@@ -186,7 +190,9 @@ write.table(
   row.names = F,
   col.names = F
 )
-# ---------------------------------- 4: Bootstrapping -----------------------------------
+
+# ---------------------------- 4: Bootstrapping --------------------------------
+
 # we bootstrap our model
 # => !! it takes rather long (~2h per analysis on a PC with 16 GB RAM & 6 CPUs ~ 2.2 GHz) to run
 edge_boot <-
@@ -205,8 +211,9 @@ case_boot <-
     nCores = 6
   ) # parallelization to multiple cores enabled
 
-# -------------------------------- 5: Plot bootstrap results -------------------------
-# -------------- Supplementary figure 1 --------------
+# --------------------------- 5: Plot bootstrap results ------------------------
+
+# ---------- Supplementary figure 1 --------------
 # 95% CI for edge weights obtained from bootstrapping
 
 # NOTE:
@@ -246,8 +253,8 @@ sumTable <-
                                                                                      factor(type, levels = statistics))
 
 summary <-
-  sumTable %>% dplyr::group_by_( ~ id) %>% dplyr::summarize_(sample = ~
-                                                               sample[type == statistics[[1]]], mean = as.formula(paste0("~mean(", meanVar, ",na.rm=TRUE)")))
+  sumTable %>% dplyr::group_by_(~ id) %>% dplyr::summarize_(sample = ~
+                                                              sample[type == statistics[[1]]], mean = as.formula(paste0("~mean(", meanVar, ",na.rm=TRUE)")))
 
 summary$order <- order(order(summary$sample, summary$mean))
 
@@ -256,14 +263,14 @@ sumTable <-
 
 # Reorder:
 sumTable <- sumTable %>%
-  dplyr::arrange_( ~ dplyr::row_number(order))  %>%
+  dplyr::arrange_(~ dplyr::row_number(order))  %>%
   dplyr::mutate_(id = ~ gsub("^(E|N): ", "", as.character(id))) %>%
   dplyr::mutate_(id = ~ factor(id, levels = unique(id)))
 
 
 # Some fancy transformation:
 revTable <- function(x)
-  x[nrow(x):1, ]
+  x[nrow(x):1,]
 
 sumTable$lbound <- sumTable[[minArea]]
 sumTable$ubound <- sumTable[[maxArea]]
@@ -329,7 +336,7 @@ gathered_sumTable %>% arrange(node1, node2) %>%
     group = 'id',
     colour = "var"
   )) +
-  facet_wrap( ~ split_plot, scales = "free_y", nrow = 1) +
+  facet_wrap(~ split_plot, scales = "free_y", nrow = 1) +
   
   geom_point(aes_string(alpha = 'alpha'), size = 3) +
   geom_path(
@@ -373,7 +380,7 @@ gathered_sumTable %>% arrange(node1, node2) %>%
 dev.off()
 
 
-# -------------------- Supplementary figure 2 ------------------------
+# ---------- Supplementary figure 2 --------------
 # plot a network in which only stable connections (>50% of bootstraps) are contained
 main_network <- qgraph(graph_all$graph, DoNotPlot = TRUE)
 
@@ -402,16 +409,16 @@ all_lay <- qgraph(
 )$layout
 
 # manually place age of cannabis use initation & cumulative use in center of network
-all_lay[1,] <- c(0.1,-0.5)
-lay <- rbind(c(0.1,-0.2), all_lay)
+all_lay[1, ] <- c(0.1, -0.5)
+lay <- rbind(c(0.1, -0.2), all_lay)
 
 
 # we unfade edges connected to age of cannabis use initation (1) and cumulative use (2)
 fade <- graph_all$graph < 1
 
-fade[2:ncol(graph_all$graph), ] <-
+fade[2:ncol(graph_all$graph),] <-
   fade[, 2:ncol(graph_all$graph)] <- TRUE
-fade[1, ] <- fade[, 1] <- fade[2, ] <- fade[, 2]  <- FALSE
+fade[1,] <- fade[, 1] <- fade[2,] <- fade[, 2]  <- FALSE
 
 # acutal plotting & export comes here
 pdf(
@@ -470,7 +477,7 @@ gathered_sumTable[c("id", "prop0")] %>%
   distinct() %>%
   select(from, to, weight)
 
-# ------------------- Supplementary figure 3 -----------------------
+# ---------- Supplementary figure 3 --------------
 # edge weight case-dropping bootstrap
 pdf("Supplementary_FigureS3.pdf",
     width = 7,
@@ -481,8 +488,9 @@ dev.off()
 
 corStability(case_boot) # 0.672 for edge
 
-# -------------------------------- 6: Network across range of gamma -------------------------
-# ------------------- Supplementary figure 4 -----------------------
+# ---------------------- 6: Network across range of gamma ----------------------
+
+# ---------- Supplementary figure 4 --------------
 # first, estimate network from gamma = 0 to gamma = 0.25 in steps of 0.05
 networks_lambda <- map(
   seq(0, 0.25, 0.05),
