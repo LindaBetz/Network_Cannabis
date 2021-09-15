@@ -11,7 +11,7 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 # ---------------------------------- 0: Reproducibility  -----------------------------------
 
-# for reproducibility, one can use the "checkpoint" package
+# for reproducibility, we use the "checkpoint" package
 # in a temporal directory, it will *install* those package versions used when the script was written
 # these versions are then used to run the script
 # to this end, a server with snapshot images of archived package versions needs to be contacted
@@ -19,8 +19,8 @@
 
 library(checkpoint)
 checkpoint(
-  snapshotDate = "2020-10-23",
-  R.version = "4.0.3",
+  snapshotDate = "2021-08-01",
+  R.version = "4.1.0",
   checkpointLocation = tempdir()
 )
 
@@ -81,25 +81,41 @@ data <- X06693_0001_Data %>%
     cumulative_use = V1909,
     # 2
     # traumatic threat experiences: check if they happened in childhood (< 18 y/o)
-    molested = ifelse(V6126 == 5, 0, ifelse(V6127 < 18, 1, 0)),
-    raped = ifelse(V6114 == 5, 0, ifelse(V6115 < 18, 1, 0)),
+    molested = case_when(
+      V6126 == 5 ~ 0,
+      V6126 == 1 & V6127 < 18 ~ 1,
+      V6126 == 1 & V6127 >= 18 ~ 0,
+      TRUE  ~ NA_real_
+    ),
+    
+    raped = case_when(
+      V6114 == 5 ~ 0,
+      V6114 == 1 & V6115 < 18 ~ 1,
+      V6114 == 1 & V6115 >= 18 ~ 0,
+      TRUE  ~ NA_real_
+    ),
     # physical abuse as a child
-    physical_abuse = ifelse(V6143 == 5, 0, 1),
-    
-    
+    physical_abuse = case_when(V6143 == 5 ~ 0,
+                               V6143 == 1 ~ 1,
+                               TRUE ~ NA_real_),
     # combine threat experiences in childhood into abuse variable
-    abuse = ifelse(molested == 1 | raped == 1 |
-                     physical_abuse == 1,
-                   #  physical_assault == 1,
-                   1,
-                   0),
-    
-    neglect = ifelse(V6144 == 5, 0, 1),
+    abuse = case_when(
+      molested == 1 | raped == 1 |
+        physical_abuse == 1 ~ 1,
+      molested == 0 & raped == 0 &
+        physical_abuse == 0 ~ 0,
+      TRUE ~ NA_real_
+    ),
+    neglect = case_when(V6144 == 5 ~ 0,
+                        V6144 == 1 ~ 1,
+                        TRUE ~ NA_real_),
     # neglect in childhood
     # neglect
     
-    urbanicity = ifelse(V7136 == 5 |
-                          V7136 == 4, 1, 0),
+    urbanicity = case_when(V7136 == 5 |
+                             V7136 == 4 ~ 1,
+                           V7136 <= 3 |   V7136 == 6 ~ 0,
+                           TRUE ~ NA_real_),
     # urbanicity: city or suburb
     # urbanicity
     V301,
@@ -163,7 +179,7 @@ data %>% rename_at(vars(-CASEID), ~ paste0(variable_names)) %>%
          sex = V13) %>%
   mutate(sex = ifelse(sex == 1, 0, 1)) %>%
   summarise_all(c("mean", "sd")) %>%
-  mutate_all(~ round(., 3))
+  mutate_all( ~ round(., 3))
 
 
 data_network <-
@@ -195,16 +211,16 @@ all_lay <- qgraph(
 )$layout
 
 # manually place age of cannabis use initiation & cumulative use in center of network
-all_lay[1,] <- c(0.1,-0.5)
-lay <- rbind(c(0.1,-0.2), all_lay)
+all_lay[1, ] <- c(0.1, -0.5)
+lay <- rbind(c(0.1, -0.2), all_lay)
 
 
 # we unfade edges connected to age of cannabis use initiation (1) and cumulative use (2)
 fade <- graph_all$graph < 1
 
-fade[2:ncol(graph_all$graph), ] <-
+fade[2:ncol(graph_all$graph),] <-
   fade[, 2:ncol(graph_all$graph)] <- TRUE
-fade[1, ] <- fade[, 1] <- fade[2, ] <- fade[, 2]  <- FALSE
+fade[1,] <- fade[, 1] <- fade[2,] <- fade[, 2]  <- FALSE
 
 
 # here, we actually plot the network and save it as a pdf in wd ("Figure1.pdf")
@@ -221,7 +237,7 @@ main_network <- qgraph(
   fade = fade,
   trans = TRUE,
   color =
-    c("#BEDEC3", "#B9D1FF", "#FFF9F9", "#DADADA"),
+    c("#a6edb1", "#92b7fc", "#FFF9F9", "#b0b0b0"),
   # color version
   # c("#b3b3b3", "#d9d9d9", "#f0f0f0", "#FFFFFF"), # greyscale version
   groups = c(
@@ -248,7 +264,7 @@ main_network <- qgraph(
 )
 dev.off()
 
-# ------------------- Moderation analysis by sex -----------------------
+# ------------------- 5: Moderation analysis by sex -----------------------
 data_sex <-
   data %>% rename_at(vars(-CASEID), ~ paste0(variable_names)) %>%
   left_join(X06693_0001_Data[c("CASEID", "V12", "V13")] %>% mutate_all(as.numeric), by =
@@ -256,10 +272,10 @@ data_sex <-
   rename(age = V12,
          sex = V13) %>%
   mutate(sex = ifelse(sex == 1, 0, 1)) %>%
-  select(-CASEID,-age) %>%
+  select(-CASEID, -age) %>%
   na.omit() %>%
   mutate_all(as.numeric) %>%
-  mutate_all( ~ recode(.,       `5` = 0))
+  mutate_all(~ recode(.,       `5` = 0))
 
 
 set.seed(1)

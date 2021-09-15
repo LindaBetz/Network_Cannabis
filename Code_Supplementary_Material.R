@@ -11,7 +11,7 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 # ---------------------------------- 0: Reproducibility  -----------------------------------
 
-# for reproducibility, one can use the "checkpoint" package
+# for reproducibility, we use the "checkpoint" package
 # in a temporal directory, it will *install* those package versions used when the script was written
 # these versions are then used to run the script
 # to this end, a server with snapshot images of archived package versions needs to be contacted
@@ -19,8 +19,8 @@
 
 library(checkpoint)
 checkpoint(
-  snapshotDate = "2020-10-23",
-  R.version = "4.0.3",
+  snapshotDate = "2021-08-01",
+  R.version = "4.1.0",
   checkpointLocation = tempdir()
 )
 
@@ -68,7 +68,6 @@ variable_names <- c(
 ) %>% tolower(.)
 
 
-
 data <- X06693_0001_Data %>%
   filter(V4097 <= 40) %>% # age at time of assessment <= 40
   filter(V1907 == 1) %>% # lifetime cannabis use; N here 2,624
@@ -79,25 +78,41 @@ data <- X06693_0001_Data %>%
     cumulative_use = V1909,
     # 2
     # traumatic threat experiences: check if they happened in childhood (< 18 y/o)
-    molested = ifelse(V6126 == 5, 0, ifelse(V6127 < 18, 1, 0)),
-    raped = ifelse(V6114 == 5, 0, ifelse(V6115 < 18, 1, 0)),
+    molested = case_when(
+      V6126 == 5 ~ 0,
+      V6126 == 1 & V6127 < 18 ~ 1,
+      V6126 == 1 & V6127 >= 18 ~ 0,
+      TRUE  ~ NA_real_
+    ),
+    
+    raped = case_when(
+      V6114 == 5 ~ 0,
+      V6114 == 1 & V6115 < 18 ~ 1,
+      V6114 == 1 & V6115 >= 18 ~ 0,
+      TRUE  ~ NA_real_
+    ),
     # physical abuse as a child
-    physical_abuse = ifelse(V6143 == 5, 0, 1),
-    
-    
+    physical_abuse = case_when(V6143 == 5 ~ 0,
+                               V6143 == 1 ~ 1,
+                               TRUE ~ NA_real_),
     # combine threat experiences in childhood into abuse variable
-    abuse = ifelse(molested == 1 | raped == 1 |
-                     physical_abuse == 1,
-                   #  physical_assault == 1,
-                   1,
-                   0),
-    
-    neglect = ifelse(V6144 == 5, 0, 1),
+    abuse = case_when(
+      molested == 1 | raped == 1 |
+        physical_abuse == 1 ~ 1,
+      molested == 0 & raped == 0 &
+        physical_abuse == 0 ~ 0,
+      TRUE ~ NA_real_
+    ),
+    neglect = case_when(V6144 == 5 ~ 0,
+                        V6144 == 1 ~ 1,
+                        TRUE ~ NA_real_),
     # neglect in childhood
     # neglect
     
-    urbanicity = ifelse(V7136 == 5 |
-                          V7136 == 4, 1, 0),
+    urbanicity = case_when(V7136 == 5 |
+                             V7136 == 4 ~ 1,
+                           V7136 <= 3 |   V7136 == 6 ~ 0,
+                           TRUE ~ NA_real_),
     # urbanicity: city or suburb
     # urbanicity
     V301,
@@ -113,7 +128,6 @@ data <- X06693_0001_Data %>%
     V312,
     #mania: Has there ever been a period of at least two days when you were so happy or excited that you got into trouble, or your family or friends worried about it, or a doctor said you were manic?
     V4101,
-    
     # psychotic experiences
     # 3
     V4103,
@@ -139,13 +153,12 @@ data <- X06693_0001_Data %>%
     V4133,
     # 14
     V4135 # 15
-    
   ) %>%
   select(-c(molested, raped, physical_abuse)) %>% # drop these variables
-  na.omit() %>% # only complete cases, as network estimator does not allow missings
   mutate_all(as.numeric) %>%
   mutate_at(vars(matches("V41|V3")), ~ recode(.,
-                                              `5` = 0))
+                                              `5` = 0)) %>%
+  na.omit()
 
 data_network <-
   data %>% select(-CASEID) # drop participant ID for network analysis
@@ -200,7 +213,7 @@ case_boot <-
 # the following code is an adapation of the "plot.bootnet" function in the bootnet package
 # it allows to split the plot depicting bootstrap confidence intervals for edges
 # into adjacent sub-plots (assuming split0=T)
-# particularly for graphs with many nodes, this ensures readability and visability
+# particularly for graphs with many nodes, this ensures readability and visibility
 
 
 x <- edge_boot # the bootnet object we want to plot
@@ -233,8 +246,8 @@ sumTable <-
                                                                                      factor(type, levels = statistics))
 
 summary <-
-  sumTable %>% dplyr::group_by_(~ id) %>% dplyr::summarize_(sample = ~
-                                                              sample[type == statistics[[1]]], mean = as.formula(paste0("~mean(", meanVar, ",na.rm=TRUE)")))
+  sumTable %>% dplyr::group_by_( ~ id) %>% dplyr::summarize_(sample = ~
+                                                               sample[type == statistics[[1]]], mean = as.formula(paste0("~mean(", meanVar, ",na.rm=TRUE)")))
 
 summary$order <- order(order(summary$sample, summary$mean))
 
@@ -243,14 +256,14 @@ sumTable <-
 
 # Reorder:
 sumTable <- sumTable %>%
-  dplyr::arrange_(~ dplyr::row_number(order))  %>%
+  dplyr::arrange_( ~ dplyr::row_number(order))  %>%
   dplyr::mutate_(id = ~ gsub("^(E|N): ", "", as.character(id))) %>%
   dplyr::mutate_(id = ~ factor(id, levels = unique(id)))
 
 
 # Some fancy transformation:
 revTable <- function(x)
-  x[nrow(x):1,]
+  x[nrow(x):1, ]
 
 sumTable$lbound <- sumTable[[minArea]]
 sumTable$ubound <- sumTable[[maxArea]]
@@ -316,7 +329,7 @@ gathered_sumTable %>% arrange(node1, node2) %>%
     group = 'id',
     colour = "var"
   )) +
-  facet_wrap(~ split_plot, scales = "free_y", nrow = 1) +
+  facet_wrap( ~ split_plot, scales = "free_y", nrow = 1) +
   
   geom_point(aes_string(alpha = 'alpha'), size = 3) +
   geom_path(
@@ -374,7 +387,7 @@ only_stable_edges <- gathered_sumTable[c("id", "prop0")] %>%
     ) %>%
       mutate(id = paste0(from, "--", to)),
     by = "id"
-  ) %>% filter(prop0 <= 0.5) %>%
+  ) %>% filter(prop0 < 0.5) %>%
   distinct() %>%
   select(from, to, weight)
 
@@ -389,16 +402,16 @@ all_lay <- qgraph(
 )$layout
 
 # manually place age of cannabis use initation & cumulative use in center of network
-all_lay[1, ] <- c(0.1, -0.5)
-lay <- rbind(c(0.1, -0.2), all_lay)
+all_lay[1,] <- c(0.1,-0.5)
+lay <- rbind(c(0.1,-0.2), all_lay)
 
 
 # we unfade edges connected to age of cannabis use initation (1) and cumulative use (2)
 fade <- graph_all$graph < 1
 
-fade[2:ncol(graph_all$graph),] <-
+fade[2:ncol(graph_all$graph), ] <-
   fade[, 2:ncol(graph_all$graph)] <- TRUE
-fade[1,] <- fade[, 1] <- fade[2,] <- fade[, 2]  <- FALSE
+fade[1, ] <- fade[, 1] <- fade[2, ] <- fade[, 2]  <- FALSE
 
 # acutal plotting & export comes here
 pdf(
@@ -415,7 +428,7 @@ qgraph(
   fade = ifelse(only_stable_edges$from == 1, FALSE, TRUE),
   trans = TRUE,
   color =
-    c("#BEDEC3", "#B9D1FF", "#FFF9F9", "#DADADA"),
+    c("#a6edb1", "#92b7fc", "#FFF9F9", "#b0b0b0"),
   # color version
   # c("#b3b3b3", "#d9d9d9", "#f0f0f0", "#FFFFFF"), # greyscale version
   groups = c(
@@ -500,7 +513,7 @@ for (i in 1:6)
     fade = fade,
     trans = TRUE,
     color =
-      c("#BEDEC3", "#B9D1FF", "#FFF9F9", "#DADADA"),
+      c("#a6edb1", "#92b7fc", "#FFF9F9", "#b0b0b0"),
     # color version
     # c("#b3b3b3", "#d9d9d9", "#f0f0f0", "#FFFFFF"), # greyscale version
     groups = c(
