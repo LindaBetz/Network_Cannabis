@@ -117,7 +117,7 @@ data <- X06693_0001_Data %>%
     # neglect
     
     urbanicity = case_when(V7136 == 5 |
-                             V7136 == 4 ~ 1,
+                           V7136 == 4 ~ 1,
                            V7136 <= 3 |   V7136 == 6 ~ 0,
                            TRUE ~ NA_real_),
     # urbanicity: city or suburb
@@ -182,9 +182,11 @@ data %>% rename_at(vars(-CASEID), ~ paste0(variable_names)) %>%
   rename(age = V12,
          sex = V13) %>%
   mutate(sex = ifelse(sex == 1, 0, 1)) %>%
+  select(-CASEID) %>%
   summarise_all(c("mean", "sd")) %>%
   mutate_all(~ round(., 3))
 
+median(data$cumulative_use) # 4
 
 data_network <-
   data %>% select(-CASEID) # drop participant ID for network analysis
