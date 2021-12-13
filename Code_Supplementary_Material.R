@@ -23,7 +23,7 @@
 
 library(checkpoint)
 checkpoint(
-  snapshotDate = "2021-08-01",
+  snapshot_date = "2021-08-01",
   R.version = "4.1.0",
   checkpointLocation = tempdir()
 )
