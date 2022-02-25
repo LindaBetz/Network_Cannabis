@@ -15,7 +15,7 @@
 
 # --------------------------- 0: Reproducibility  -------------------------------
 
-# for reproducibility, we use the "checkpoint" package
+# for reproducibility, use the "checkpoint" package
 # in a temporal directory, it will *install* those package versions used when the script was written
 # these versions are then used to run the script
 # to this end, a server with snapshot images of archived package versions needs to be contacted
@@ -23,7 +23,7 @@
 
 library(checkpoint)
 checkpoint(
-  snapshot_date = "2021-08-01",
+  snapshotDate = "2021-08-01",
   R.version = "4.1.0",
   checkpointLocation = tempdir()
 )
@@ -68,7 +68,8 @@ variable_names <- c(
   "SAW VISIONS",
   "HEARD NOISE/VOICE",
   "SMELLS/BODY ODORS",
-  "FEELINGS IN/ON BODY"
+  "FEELINGS IN/ON BODY",
+  "age at assessment"
 ) %>% tolower(.)
 
 
@@ -156,31 +157,33 @@ data <- X06693_0001_Data %>%
     # 13
     V4133,
     # 14
-    V4135 # 15
+    V4135,
+    # 15,
+    age = V4097
+    
   ) %>%
   select(-c(molested, raped, physical_abuse)) %>% # drop these variables
   mutate_all(as.numeric) %>%
   mutate_at(vars(matches("V41|V3")), ~ recode(.,
-                                              `5` = 0)) %>%
-  na.omit()
-
+                                              `5` = 0))
 data_network <-
   data %>% select(-CASEID) # drop participant ID for network analysis
 colnames(data_network) <-
-  as.character(1:24) # set colnames to numbers for nice plotting
+  as.character(1:25) # set colnames to numbers for nice plotting
 
 # -------------------------- 3: Network Estimation -----------------------------
 
-# we use a mixed graphical model as implemented in mgm-package
+# use a mixed graphical model as implemented in mgm-package
 graph_all <- estimateNetwork(
   data_network,
   default = "mgm",
-  type = c(rep("g", 2), rep("c", 22)),
-  level = c(rep(1, 2), rep(2, 22)),
+  type = c(rep("g", 2), rep("c", 22), "g"),
+  level = c(rep(1, 2), rep(2, 22), 1),
   criterion = "EBIC",
   tuning = 0,
   rule = "OR"
 )
+
 
 # export for supplementary table 1
 write.table(
@@ -193,18 +196,20 @@ write.table(
 
 # ---------------------------- 4: Bootstrapping --------------------------------
 
-# we bootstrap our model
+# bootstrap our model
 # => !! it takes rather long (~2h per analysis on a PC with 16 GB RAM & 6 CPUs ~ 2.2 GHz) to run
+set.seed(1)
 edge_boot <-
   bootnet(graph_all, nBoots = 1000, nCores = 6) # parallelization to multiple cores enabled
 
 
 # => !! it takes rather long (~2h per analysis on a PC with 16 GB RAM & 6 CPUs ~ 2.2 GHz) to run
+set.seed(1)
 case_boot <-
   bootnet(
     graph_all,
     statistics = "edge",
-    # we are not interested in centrality measures
+    # not interested in centrality measures
     nBoots = 1000,
     type = "case",
     caseN = 10,
@@ -223,12 +228,12 @@ case_boot <-
 # particularly for graphs with many nodes, this ensures readability and visibility
 
 
-x <- edge_boot # the bootnet object we want to plot
+x <- edge_boot # the bootnet object to plot
 which_nodes <- 1:2 # the nodes, here given as integers
 n_facets <-
-  2 # how many "blocks" do we want the plot to be divided in
+  2 # how many "blocks" the plot to be divided in
 
-# some other settings, we leave them mostly at default
+# some other settings, leave them mostly at default
 meanVar <- "mean"
 
 minArea <- "q2.5"
@@ -317,7 +322,7 @@ sumTable2$alpha <-
 
 
 
-# for convenience, we determine the facet membership here
+# for convenience, determine the facet membership here
 split_plot <- gathered_sumTable %>% arrange(node1, node2) %>%
   filter(node1 %in% which_nodes | node2 %in% which_nodes) %>%
   transmute(id, split_plot = -ntile(mean, n_facets)) %>%
@@ -399,22 +404,22 @@ only_stable_edges <- gathered_sumTable[c("id", "prop0")] %>%
   select(from, to, weight)
 
 
-# use this information to plot the network and save it as a pdf in wd ("Supplementary_FigureS2.pdf")
-# first, determine layout
+# compute layout with all variables except age of cannabis use initiation
 all_lay <- qgraph(
-  graph_all$graph[2:24, 2:24],
+  graph_all$graph[3:25, 3:25],
   layout = "spring",
-  repulsion = 0.99,
-  theme = "colorblind"
+  repulsion = 0.834,
+  theme = "colorblind",
+  DoNotPlot = TRUE
 )$layout
 
-# manually place age of cannabis use initation & cumulative use in center of network
-all_lay[1, ] <- c(0.1, -0.5)
-lay <- rbind(c(0.1, -0.2), all_lay)
+# manually place age of cannabis use initiation & cumulative use in center of network
+all_lay <- rbind(c(0.02718975, 0.22819307), all_lay)
+lay <- rbind(c(0.02718975, -0.1), all_lay)
 
 
-# we unfade edges connected to age of cannabis use initation (1) and cumulative use (2)
-fade <- graph_all$graph < 1
+# unfade edges connected to age of cannabis use initiation (1) and cumulative use (2)
+fade <- is.finite(graph_all$graph)
 
 fade[2:ncol(graph_all$graph),] <-
   fade[, 2:ncol(graph_all$graph)] <- TRUE
@@ -432,17 +437,18 @@ qgraph(
   directed = F,
   layout = lay * -1,
   # flip everything because it looks nicer
-  fade = ifelse(only_stable_edges$from == 1, FALSE, TRUE),
+  fade = fade,
   trans = TRUE,
   color =
-    c("#a6edb1", "#92b7fc", "#FFF9F9", "#b0b0b0"),
+    c("#a6edb1", "#92b7fc", "#FFF9F9", "#b0b0b0", "white"),
   # color version
   # c("#b3b3b3", "#d9d9d9", "#f0f0f0", "#FFFFFF"), # greyscale version
   groups = c(
     rep("Cannabis Use Characteristics", 2),
     rep("Early Risk Factors", 3),
     rep("Mood", 6),
-    rep("Psychosis", 13)
+    rep("Psychosis", 13),
+    rep("Covariate", 1)
   ),
   theme = "colorblind",
   legend = T,
@@ -454,7 +460,6 @@ qgraph(
   legend.cex = 0.35,
   edge.width = 0.5,
   nodeNames = variable_names,
-  # edge.color = "black", # greyscale version only
   negDashed = TRUE,
   mar = c(4, 4, 4, 4),
   layoutScale = c(1.12, 1),
@@ -486,7 +491,7 @@ plot(case_boot, statistics = "edge")
 dev.off()
 
 
-corStability(case_boot) # 0.672 for edge
+corStability(case_boot) # 0.595 for edge
 
 # ---------------------- 6: Network across range of gamma ----------------------
 
@@ -521,14 +526,15 @@ for (i in 1:6)
     fade = fade,
     trans = TRUE,
     color =
-      c("#a6edb1", "#92b7fc", "#FFF9F9", "#b0b0b0"),
+      c("#a6edb1", "#92b7fc", "#FFF9F9", "#b0b0b0", "white"),
     # color version
     # c("#b3b3b3", "#d9d9d9", "#f0f0f0", "#FFFFFF"), # greyscale version
     groups = c(
       rep("Cannabis Use Characteristics", 2),
       rep("Early Risk Factors", 3),
       rep("Mood", 6),
-      rep("Psychosis", 13)
+      rep("Psychosis", 13),
+      rep("Covariate", 1)
     ),
     theme = "colorblind",
     legend = F,
