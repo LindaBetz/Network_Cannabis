@@ -15,7 +15,7 @@
 
 # --------------------------- 0: Reproducibility  -------------------------------
 
-# for reproducibility, we use the "checkpoint" package
+# for reproducibility, use the "checkpoint" package
 # in a temporal directory, it will *install* those package versions used when the script was written
 # these versions are then used to run the script
 # to this end, a server with snapshot images of archived package versions needs to be contacted
@@ -23,7 +23,7 @@
 
 library(checkpoint)
 checkpoint(
-  snapshot_date = "2021-08-01",
+  snapshotDate = "2021-08-01",
   R.version = "4.1.0",
   checkpointLocation = tempdir()
 )
@@ -46,6 +46,7 @@ X06693_0001_Data <- read_sav("DS0001/06693-0001-Data.sav")
 
 
 # ------------------- 2: Data preparation & sample descriptives ----------------
+
 
 variable_names <- c(
   "age of cannabis use initiation",
@@ -71,7 +72,8 @@ variable_names <- c(
   "SAW VISIONS",
   "HEARD NOISE/VOICE",
   "SMELLS/BODY ODORS",
-  "FEELINGS IN/ON BODY"
+  "FEELINGS IN/ON BODY",
+  "age at assessment"
 ) %>% tolower(.)
 
 
@@ -117,7 +119,7 @@ data <- X06693_0001_Data %>%
     # neglect
     
     urbanicity = case_when(V7136 == 5 |
-                           V7136 == 4 ~ 1,
+                             V7136 == 4 ~ 1,
                            V7136 <= 3 |   V7136 == 6 ~ 0,
                            TRUE ~ NA_real_),
     # urbanicity: city or suburb
@@ -159,7 +161,10 @@ data <- X06693_0001_Data %>%
     # 13
     V4133,
     # 14
-    V4135 # 15
+    V4135,
+    # 15,
+    age = V4097
+    
   ) %>%
   select(-c(molested, raped, physical_abuse)) %>% # drop these variables
   mutate_all(as.numeric) %>%
@@ -176,67 +181,114 @@ data <-
 (2624 - nrow(data)) / 2624 # 0.0304878 => ~3.0%
 
 # get descriptives for sample
-data %>% rename_at(vars(-CASEID), ~ paste0(variable_names)) %>%
+data_descriptives <- data %>% rename_at(vars(-CASEID), ~ paste0(variable_names)) %>%
   left_join(X06693_0001_Data[c("CASEID", "V12", "V13")] %>% mutate_all(as.numeric), by =
               "CASEID") %>%
-  rename(age = V12,
-         sex = V13) %>%
-  mutate(sex = ifelse(sex == 1, 0, 1)) %>%
-  select(-CASEID) %>%
+  left_join(X06693_0001_Data[c("CASEID", "V7141", "V7129", "V1910", "V7111", "V7112", "V7120", "V7121", "V7122", "V7123", "V7124")] %>% mutate_all(as.numeric), by =
+              "CASEID") %>%
+  rename(
+         age = V12,
+         sex = V13,
+         education = V7141,
+         time_last_used = V1910,
+         foreign_born = V7129) %>%
+   mutate(education = case_when(education %in% c(0:11) ~ "less than high school",
+                                education == 12 ~ "high school or equivalent",
+                                education %in% c(13:15) ~ "some college",
+                                education > 16 ~ "college degree and beyond",
+                                TRUE ~ NA_character_),
+     ethnicity = case_when(!is.na(V7111) ~ "hispanic",
+                           V7120 == 1 ~ "white",
+                               V7121 == 1 ~ "black",
+                              (V7124 == 1| V7123 == 1| V7122 == 1) ~ "other",
+                               TRUE ~ NA_character_),
+          foreign_born = if_else(foreign_born == 5, 0, 1)) %>%
+  mutate(sex = ifelse(sex == 1, 0, 1)) %>% # male = 0, female = 1
+  select(-c("CASEID", "V7111", "V7112", "V7120", "V7121", "V7122", "V7123", "V7124"))
+
+# mean, sd
+data_descriptives %>%
+  select(-ethnicity, -`lifetime cumulative frequency`) %>%
   summarise_all(c("mean", "sd")) %>%
   mutate_all(~ round(., 3))
 
-median(data$cumulative_use) # 4
+# sex
+round(table(data_descriptives$sex) / nrow(data),
+      3)
+
+# education
+round(table(data_descriptives$education, useNA = "always") / nrow(data),
+      3)
+
+# ethnicity
+round(table(data_descriptives$ethnicity, useNA = "always") / nrow(data),
+      3)
+
+# immigration status
+round(table(data_descriptives$foreign_born, useNA = "always") / nrow(data),
+      3)
+
+# cumulative use
+round(table(data_descriptives$`lifetime cumulative frequency`) / nrow(data),
+      3)
+median(data_descriptives$`lifetime cumulative frequency`) # 4
+
+# time last used
+round(table(data_descriptives$time_last_used, useNA = "always") / nrow(data),
+      3)
+
 
 data_network <-
-  data %>% select(-CASEID) # drop participant ID for network analysis
+  data %>% select(-CASEID) %>%
+  na.omit() # drop participant ID for network analysis
+
 colnames(data_network) <-
-  as.character(1:24) # set colnames to numbers for nice plotting
+  as.character(1:25) # set colnames to numbers for nice plotting
 
 # -------------------------- 3: Network Estimation -----------------------------
 
-# we use a mixed graphical model as implemented in mgm-package
+# use a mixed graphical model as implemented in mgm-package
 graph_all <- estimateNetwork(
   data_network,
   default = "mgm",
-  type = c(rep("g", 2), rep("c", 22)),
-  level = c(rep(1, 2), rep(2, 22)),
+  type = c(rep("g", 2), rep("c", 22), "g"),
+  level = c(rep(1, 2), rep(2, 22), 1),
   criterion = "EBIC",
   tuning = 0,
   rule = "OR"
 )
 
-
 # -------------------- 4: Plotting the Network (Figure 1) ----------------------
 
 # compute layout with all variables except age of cannabis use initiation
 all_lay <- qgraph(
-  graph_all$graph[2:24, 2:24],
+  graph_all$graph[3:25, 3:25],
   layout = "spring",
-  repulsion = 0.99,
+  repulsion = 0.834,
   theme = "colorblind",
   DoNotPlot = TRUE
 )$layout
 
 # manually place age of cannabis use initiation & cumulative use in center of network
-all_lay[1,] <- c(0.1,-0.5)
-lay <- rbind(c(0.1,-0.2), all_lay)
+all_lay <- rbind(c(0.02718975, 0.22819307), all_lay)
+lay <- rbind(c(0.02718975,-0.1), all_lay)
 
 
-# we unfade edges connected to age of cannabis use initiation (1) and cumulative use (2)
-fade <- graph_all$graph < 1
+# unfade edges connected to age of cannabis use initiation (1) and cumulative use (2)
+fade <- is.finite(graph_all$graph)
 
 fade[2:ncol(graph_all$graph), ] <-
   fade[, 2:ncol(graph_all$graph)] <- TRUE
 fade[1, ] <- fade[, 1] <- fade[2, ] <- fade[, 2]  <- FALSE
 
 
-# here, we actually plot the network and save it as a pdf in wd ("Figure1.pdf")
+
+# here, actually plot the network and save it as a pdf in wd ("Figure_1.pdf")
 pdf(
   colormodel = "cmyk",
   width = 7.0,
   height = 5,
-  file = "Figure1.pdf"
+  file = "Figure_1.pdf"
 )
 main_network <- qgraph(
   graph_all$graph,
@@ -245,14 +297,15 @@ main_network <- qgraph(
   fade = fade,
   trans = TRUE,
   color =
-    c("#a6edb1", "#92b7fc", "#FFF9F9", "#b0b0b0"),
+    c("#a6edb1", "#92b7fc", "#FFF9F9", "#b0b0b0", "white"),
   # color version
   # c("#b3b3b3", "#d9d9d9", "#f0f0f0", "#FFFFFF"), # greyscale version
   groups = c(
     rep("Cannabis Use Characteristics", 2),
     rep("Early Risk Factors", 3),
     rep("Mood", 6),
-    rep("Psychosis", 13)
+    rep("Psychosis", 13),
+    rep("Covariate", 1)
   ),
   theme = "colorblind",
   legend = T,
@@ -264,13 +317,13 @@ main_network <- qgraph(
   legend.cex = 0.35,
   edge.width = 0.5,
   nodeNames = variable_names,
-  # edge.color = "black", # greyscale version only
   negDashed = TRUE,
   mar = c(4, 4, 4, 4),
   layoutScale = c(1.12, 1),
   layoutOffset = c(0, 0)
 )
 dev.off()
+
 
 # ---------------------- 5: Moderation analysis by sex -------------------------
 data_sex <-
@@ -280,10 +333,10 @@ data_sex <-
   rename(age = V12,
          sex = V13) %>%
   mutate(sex = ifelse(sex == 1, 0, 1)) %>%
-  select(-CASEID,-age) %>%
+  select(-CASEID, -age) %>%
   na.omit() %>%
   mutate_all(as.numeric) %>%
-  mutate_all( ~ recode(.,       `5` = 0))
+  mutate_all(~ recode(.,       `5` = 0))
 
 
 set.seed(1)
@@ -291,11 +344,11 @@ mgm_mod <- mgm(
   data = data_sex %>% as.matrix(),
   # convert to matrix, otherwise resampling doesn't work
   lambdaSel = "EBIC",
-  type = c(rep("g", 2), rep("c", 23)),
-  level = c(rep(1, 2), rep(2, 23)),
+  type = c(rep("g", 2), rep("c", 22), "g", "c"),
+  level = c(rep(1, 2), rep(2, 22), 1, 2),
   lambdaGam = 0,
   ruleReg = "OR",
-  moderators = 25,
+  moderators = 26,
   threshold = "none",
   pbar = FALSE,
   binarySign = TRUE
@@ -306,24 +359,26 @@ mgm_mod <- mgm(
 moderation_effects_node_1 <- c()
 
 j = 1
-for (i in seq(from = 2, to = 24, by = 1)) {
+for (i in seq(from = 2, to = 25, by = 1)) {
   moderation_effects_node_1[j] <-
-    showInteraction(mgm_mod, int = c(1, i, 25))$edgeweight
+    showInteraction(mgm_mod, int = c(1, i, 26))$edgeweight
   j = j + 1
 }
 
-data.frame(effect = moderation_effects_node_1, node = 2:24) # no moderation effects
+data.frame(effect = moderation_effects_node_1, node = 2:25) # one moderation effect
+# (connection: age at assessment--age of cannabis use initiation => stronger in women)
+
 
 # node 2: frequency of use
 moderation_effects_node_2 <- c()
 j = 1
-for (i in seq(from = 3, to = 24, by = 1)) {
+for (i in seq(from = 3, to = 25, by = 1)) {
   moderation_effects_node_2[j] <-
-    showInteraction(mgm_mod, int = c(2, i, 25))$edgeweight
+    showInteraction(mgm_mod, int = c(2, i, 26))$edgeweight
   j = j + 1
 }
 
-data.frame(effect = moderation_effects_node_2, node = 3:24) # one moderation effect
+data.frame(effect = moderation_effects_node_2, node = 3:25) # one moderation effect
 # (connection: urbanicity--frequency of cannabis use => stronger in women)
 
 # bootstrap results to see if this moderation effect is stable
@@ -332,10 +387,6 @@ set.seed(1)
 mgm_resampled <-
   resample(mgm_mod, data = data_sex %>% as.matrix(), nB = 1000)
 
+# --> both moderation effects are not stable:
 plotRes(
-  mgm_resampled,
-  cut = 188:189,
-  lwd.qtl = 2,
-  axis.ticks = c(-0.05, 0, 0.05)
-)
-# effect is not stable, 0 contained in 95% CI (upper effect plotted)
+  mgm_resampled)
