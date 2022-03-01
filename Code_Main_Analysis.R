@@ -82,7 +82,7 @@ data <- X06693_0001_Data %>%
   filter(V1907 == 1) %>% # lifetime cannabis use; N here 2,624
   transmute(
     CASEID,
-    age_onset = V1908,
+    age_initiation = V1908,
     # 1
     cumulative_use = V1909,
     # 2
@@ -172,7 +172,7 @@ data <- X06693_0001_Data %>%
                                               `5` = 0))
 
 # test missing completely at random (MCAR) assumption
-TestMCARNormality(data = data) # 0.7130785 => missings likely MCAR, complete case analysis ok
+TestMCARNormality(data = data) # 0.6236879 => missings likely MCAR, complete case analysis ok
 
 data <-
   data %>% na.omit() # only complete cases, as network estimator does not allow missing
@@ -181,40 +181,88 @@ data <-
 (2624 - nrow(data)) / 2624 # 0.0304878 => ~3.0%
 
 # get descriptives for sample
-data_descriptives <- data %>% rename_at(vars(-CASEID), ~ paste0(variable_names)) %>%
-  left_join(X06693_0001_Data[c("CASEID", "V12", "V13")] %>% mutate_all(as.numeric), by =
+data_descriptives <-
+  data %>% rename_at(vars(-CASEID), ~ paste0(variable_names)) %>%
+  left_join(X06693_0001_Data[c("CASEID", "V13")] %>% mutate_all(as.numeric), by =
               "CASEID") %>%
-  left_join(X06693_0001_Data[c("CASEID", "V7141", "V7129", "V1910", "V7111", "V7112", "V7120", "V7121", "V7122", "V7123", "V7124")] %>% mutate_all(as.numeric), by =
-              "CASEID") %>%
+  left_join(X06693_0001_Data[c(
+    "CASEID",
+    "V7141",
+    "V7129",
+    "V1910",
+    "V7111",
+    "V7112",
+    "V7120",
+    "V7121",
+    "V7122",
+    "V7123",
+    "V7124"
+  )] %>% mutate_all(as.numeric), by =
+    "CASEID") %>%
   rename(
-         age = V12,
-         sex = V13,
-         education = V7141,
-         time_last_used = V1910,
-         foreign_born = V7129) %>%
-   mutate(education = case_when(education %in% c(0:11) ~ "less than high school",
-                                education == 12 ~ "high school or equivalent",
-                                education %in% c(13:15) ~ "some college",
-                                education > 16 ~ "college degree and beyond",
-                                TRUE ~ NA_character_),
-     ethnicity = case_when(!is.na(V7111) ~ "hispanic",
-                           V7120 == 1 ~ "white",
-                               V7121 == 1 ~ "black",
-                              (V7124 == 1| V7123 == 1| V7122 == 1) ~ "other",
-                               TRUE ~ NA_character_),
-          foreign_born = if_else(foreign_born == 5, 0, 1)) %>%
+    sex = V13,
+    education = V7141,
+    time_last_used = V1910,
+    foreign_born = V7129
+  ) %>%
+  mutate(
+    education = case_when(
+      education %in% c(0:11) ~ "less than high school",
+      education == 12 ~ "high school or equivalent",
+      education %in% c(13:15) ~ "some college",
+      education > 16 ~ "college degree and beyond",
+      TRUE ~ NA_character_
+    ),
+    ethnicity = case_when(
+      !is.na(V7111) ~ "hispanic",
+      V7120 == 1 ~ "white",
+      V7121 == 1 ~ "black",
+      (V7124 == 1 |
+         V7123 == 1 | V7122 == 1) ~ "other",
+      TRUE ~ NA_character_
+    ),
+    foreign_born = if_else(foreign_born == 5, 0, 1)
+  ) %>%
   mutate(sex = ifelse(sex == 1, 0, 1)) %>% # male = 0, female = 1
-  select(-c("CASEID", "V7111", "V7112", "V7120", "V7121", "V7122", "V7123", "V7124"))
+  select(-c(
+    "CASEID",
+    "V7111",
+    "V7112",
+    "V7120",
+    "V7121",
+    "V7122",
+    "V7123",
+    "V7124"
+  ))
 
-# mean, sd
+
+# age (mean, sd)
+
 data_descriptives %>%
-  select(-ethnicity, -`lifetime cumulative frequency`) %>%
+  select(`age of cannabis use initiation`,
+         `age at assessment`) %>%
   summarise_all(c("mean", "sd")) %>%
+  mutate_all( ~ round(., 3))
+
+
+# symptom & risk factor prevalences
+data_descriptives %>%
+  select(
+    -c(ethnicity,
+    `lifetime cumulative frequency`,
+    `age of cannabis use initiation`,
+    `age at assessment`,
+    `time_last_used`,
+    education,
+    sex,
+    foreign_born)
+  ) %>%
+  summarise_all(c("mean")) %>%
   mutate_all(~ round(., 3))
 
 # sex
 round(table(data_descriptives$sex) / nrow(data),
-      3)
+      3) # 0 = male, 1 = female
 
 # education
 round(table(data_descriptives$education, useNA = "always") / nrow(data),
@@ -233,10 +281,9 @@ round(table(data_descriptives$`lifetime cumulative frequency`) / nrow(data),
       3)
 median(data_descriptives$`lifetime cumulative frequency`) # 4
 
-# time last used
+# time last used cannabis
 round(table(data_descriptives$time_last_used, useNA = "always") / nrow(data),
       3)
-
 
 data_network <-
   data %>% select(-CASEID) %>%
@@ -245,7 +292,7 @@ data_network <-
 colnames(data_network) <-
   as.character(1:25) # set colnames to numbers for nice plotting
 
-# -------------------------- 3: Network Estimation -----------------------------
+# -------------------------- 3: Network Estimation (Table 2) -----------------------------
 
 # use a mixed graphical model as implemented in mgm-package
 graph_all <- estimateNetwork(
@@ -256,6 +303,15 @@ graph_all <- estimateNetwork(
   criterion = "EBIC",
   tuning = 0,
   rule = "OR"
+)
+
+# export for table 2
+write.table(
+  round(graph_all$graph, 2),
+  file = "edge_weights_network.csv",
+  sep = ",",
+  row.names = F,
+  col.names = F
 )
 
 # -------------------- 4: Plotting the Network (Figure 1) ----------------------
@@ -271,7 +327,8 @@ all_lay <- qgraph(
 
 # manually place age of cannabis use initiation & cumulative use in center of network
 all_lay <- rbind(c(0.02718975, 0.22819307), all_lay)
-lay <- rbind(c(0.02718975,-0.1), all_lay)
+lay <- rbind(c(0.02718975, -0.09), all_lay)
+
 
 
 # unfade edges connected to age of cannabis use initiation (1) and cumulative use (2)
@@ -297,15 +354,24 @@ main_network <- qgraph(
   fade = fade,
   trans = TRUE,
   color =
-    c("#a6edb1", "#92b7fc", "#FFF9F9", "#b0b0b0", "white"),
+    c("#a6edb1", "#abc8ff", "#fff9f9", "#c7c3c3", "#fcb0ff"),
   # color version
   # c("#b3b3b3", "#d9d9d9", "#f0f0f0", "#FFFFFF"), # greyscale version
-  groups = c(
-    rep("Cannabis Use Characteristics", 2),
-    rep("Early Risk Factors", 3),
-    rep("Mood", 6),
-    rep("Psychosis", 13),
-    rep("Covariate", 1)
+  groups = factor(
+    c(
+      rep("Cannabis Use Characteristics", 2),
+      rep("Early Risk Factors", 3),
+      rep("Mood", 6),
+      rep("Psychosis", 13),
+      rep("Covariate", 1)
+    ),
+    levels = c(
+      "Cannabis Use Characteristics",
+      "Early Risk Factors",
+      "Mood",
+      "Psychosis",
+      "Covariate"
+    )
   ),
   theme = "colorblind",
   legend = T,
@@ -331,7 +397,7 @@ data_sex <-
   left_join(X06693_0001_Data[c("CASEID", "V12", "V13")] %>% mutate_all(as.numeric), by =
               "CASEID") %>%
   rename(age = V12,
-         sex = V13) %>%
+         sex = V13) %>% # male = 0, female = 1
   mutate(sex = ifelse(sex == 1, 0, 1)) %>%
   select(-CASEID, -age) %>%
   na.omit() %>%
@@ -369,7 +435,7 @@ data.frame(effect = moderation_effects_node_1, node = 2:25) # one moderation eff
 # (connection: age at assessment--age of cannabis use initiation => stronger in women)
 
 
-# node 2: frequency of use
+# node 2: frequency of cannabis use
 moderation_effects_node_2 <- c()
 j = 1
 for (i in seq(from = 3, to = 25, by = 1)) {
@@ -379,7 +445,7 @@ for (i in seq(from = 3, to = 25, by = 1)) {
 }
 
 data.frame(effect = moderation_effects_node_2, node = 3:25) # one moderation effect
-# (connection: urbanicity--frequency of cannabis use => stronger in women)
+# (connection: urbanicity--frequency of cannabis use => stronger in men)
 
 # bootstrap results to see if this moderation effect is stable
 # !! takes long to run on a standard PC (~ 8-9h)
@@ -388,5 +454,4 @@ mgm_resampled <-
   resample(mgm_mod, data = data_sex %>% as.matrix(), nB = 1000)
 
 # --> both moderation effects are not stable:
-plotRes(
-  mgm_resampled)
+plotRes(mgm_resampled)
