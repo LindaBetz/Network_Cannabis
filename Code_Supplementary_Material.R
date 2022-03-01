@@ -73,12 +73,13 @@ variable_names <- c(
 ) %>% tolower(.)
 
 
+
 data <- X06693_0001_Data %>%
   filter(V4097 <= 40) %>% # age at time of assessment <= 40
   filter(V1907 == 1) %>% # lifetime cannabis use; N here 2,624
   transmute(
     CASEID,
-    age_onset = V1908,
+    age_initiation = V1908,
     # 1
     cumulative_use = V1909,
     # 2
@@ -167,7 +168,9 @@ data <- X06693_0001_Data %>%
   mutate_at(vars(matches("V41|V3")), ~ recode(.,
                                               `5` = 0))
 data_network <-
-  data %>% select(-CASEID) # drop participant ID for network analysis
+  data %>% select(-CASEID) %>% # drop participant ID for network analysis
+  na.omit() # complete case analysis
+
 colnames(data_network) <-
   as.character(1:25) # set colnames to numbers for nice plotting
 
@@ -184,15 +187,6 @@ graph_all <- estimateNetwork(
   rule = "OR"
 )
 
-
-# export for supplementary table 1
-write.table(
-  round(graph_all$graph, 2),
-  file = "edge_weights_network.csv",
-  sep = ",",
-  row.names = F,
-  col.names = F
-)
 
 # ---------------------------- 4: Bootstrapping --------------------------------
 
@@ -415,7 +409,7 @@ all_lay <- qgraph(
 
 # manually place age of cannabis use initiation & cumulative use in center of network
 all_lay <- rbind(c(0.02718975, 0.22819307), all_lay)
-lay <- rbind(c(0.02718975, -0.1), all_lay)
+lay <- rbind(c(0.02718975, -0.09), all_lay)
 
 
 # unfade edges connected to age of cannabis use initiation (1) and cumulative use (2)
@@ -437,18 +431,28 @@ qgraph(
   directed = F,
   layout = lay * -1,
   # flip everything because it looks nicer
-  fade = fade,
+  fade = only_stable_edges %>% mutate(fade = if_else(from %in% c(1, 2) |
+                                                       to %in% c(1, 2), FALSE, TRUE)) %>% .$fade,
   trans = TRUE,
   color =
-    c("#a6edb1", "#92b7fc", "#FFF9F9", "#b0b0b0", "white"),
+    c("#a6edb1", "#abc8ff", "#fff9f9", "#c7c3c3", "#fcb0ff"),
   # color version
   # c("#b3b3b3", "#d9d9d9", "#f0f0f0", "#FFFFFF"), # greyscale version
-  groups = c(
-    rep("Cannabis Use Characteristics", 2),
-    rep("Early Risk Factors", 3),
-    rep("Mood", 6),
-    rep("Psychosis", 13),
-    rep("Covariate", 1)
+  groups = factor(
+    c(
+      rep("Cannabis Use Characteristics", 2),
+      rep("Early Risk Factors", 3),
+      rep("Mood", 6),
+      rep("Psychosis", 13),
+      rep("Covariate", 1)
+    ),
+    levels = c(
+      "Cannabis Use Characteristics",
+      "Early Risk Factors",
+      "Mood",
+      "Psychosis",
+      "Covariate"
+    )
   ),
   theme = "colorblind",
   legend = T,
@@ -502,8 +506,8 @@ networks_lambda <- map(
   ~ estimateNetwork(
     data_network,
     default = "mgm",
-    type = c(rep("g", 2), rep("c", 22)),
-    level = c(rep(1, 2), rep(2, 22)),
+    type = c(rep("g", 2), rep("c", 22), "g"),
+    level = c(rep(1, 2), rep(2, 22), 1),
     criterion = "EBIC",
     tuning = .,
     rule = "OR"
@@ -526,15 +530,24 @@ for (i in 1:6)
     fade = fade,
     trans = TRUE,
     color =
-      c("#a6edb1", "#92b7fc", "#FFF9F9", "#b0b0b0", "white"),
+      c("#a6edb1", "#abc8ff", "#fff9f9", "#c7c3c3", "#fcb0ff"),
     # color version
     # c("#b3b3b3", "#d9d9d9", "#f0f0f0", "#FFFFFF"), # greyscale version
-    groups = c(
-      rep("Cannabis Use Characteristics", 2),
-      rep("Early Risk Factors", 3),
-      rep("Mood", 6),
-      rep("Psychosis", 13),
-      rep("Covariate", 1)
+    groups = factor(
+      c(
+        rep("Cannabis Use Characteristics", 2),
+        rep("Early Risk Factors", 3),
+        rep("Mood", 6),
+        rep("Psychosis", 13),
+        rep("Covariate", 1)
+      ),
+      levels = c(
+        "Cannabis Use Characteristics",
+        "Early Risk Factors",
+        "Mood",
+        "Psychosis",
+        "Covariate"
+      )
     ),
     theme = "colorblind",
     legend = F,
@@ -544,7 +557,7 @@ for (i in 1:6)
     label.cex = 1.9,
     vsize = 7,
     legend.cex = 0.35,
-    edge.width = 1,
+    edge.width = 0.8,
     nodeNames = variable_names,
     # edge.color = "black", # greyscale version only
     negDashed = TRUE,
