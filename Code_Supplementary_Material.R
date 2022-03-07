@@ -212,7 +212,7 @@ case_boot <-
 
 # --------------------------- 5: Plot bootstrap results ------------------------
 
-# ---------- Supplementary figure 1 --------------
+# ---------- Supplementary Figure 1 --------------
 # 95% CI for edge weights obtained from bootstrapping
 
 # NOTE:
@@ -323,7 +323,7 @@ split_plot <- gathered_sumTable %>% arrange(node1, node2) %>%
   distinct(., id, .keep_all = TRUE)
 
 # the acutal plot comes here
-pdf("Supplementary_FigureS1.pdf",
+pdf("Supplementary_Figure_1.pdf",
     height = 8,
     width =  8)
 gathered_sumTable %>% arrange(node1, node2) %>%
@@ -379,7 +379,7 @@ gathered_sumTable %>% arrange(node1, node2) %>%
 dev.off()
 
 
-# ---------- Supplementary figure 2 --------------
+# ---------- Supplementary Figure 2 --------------
 # plot a network in which only stable connections (>50% of bootstraps) are contained
 main_network <- qgraph(graph_all$graph, DoNotPlot = TRUE)
 
@@ -424,7 +424,7 @@ pdf(
   colormodel = "cmyk",
   width = 7.0,
   height = 5,
-  file = "Supplementary_FigureS2.pdf"
+  file = "Supplementary_Figure_2.pdf"
 )
 qgraph(
   only_stable_edges,
@@ -442,15 +442,15 @@ qgraph(
     c(
       rep("Cannabis Use Characteristics", 2),
       rep("Early Risk Factors", 3),
-      rep("Mood", 6),
-      rep("Psychosis", 13),
+      rep("Affective Symptoms", 6),
+      rep("Psychotic Experiences", 13),
       rep("Covariate", 1)
     ),
     levels = c(
       "Cannabis Use Characteristics",
       "Early Risk Factors",
-      "Mood",
-      "Psychosis",
+      "Affective Symptoms",
+      "Psychotic Experiences",
       "Covariate"
     )
   ),
@@ -486,9 +486,9 @@ gathered_sumTable[c("id", "prop0")] %>%
   distinct() %>%
   select(from, to, weight)
 
-# ---------- Supplementary figure 3 --------------
+# ---------- Supplementary Figure 3 --------------
 # edge weight case-dropping bootstrap
-pdf("Supplementary_FigureS3.pdf",
+pdf("Supplementary_Figure_3.pdf",
     width = 7,
     height = 5)
 plot(case_boot, statistics = "edge")
@@ -499,7 +499,7 @@ corStability(case_boot) # 0.595 for edge
 
 # ---------------------- 6: Network across range of gamma ----------------------
 
-# ---------- Supplementary figure 4 --------------
+# ---------- Supplementary Figure 4 --------------
 # first, estimate network from gamma = 0 to gamma = 0.25 in steps of 0.05
 networks_lambda <- map(
   seq(0, 0.25, 0.05),
@@ -519,7 +519,7 @@ pdf(
   colormodel = "cmyk",
   width = 7,
   height = 5.5,
-  file = "Supplementary_FigureS4.pdf"
+  file = "Supplementary_Figure_4.pdf"
 )
 par(mfrow = c(2, 3))
 for (i in 1:6)
@@ -537,15 +537,15 @@ for (i in 1:6)
       c(
         rep("Cannabis Use Characteristics", 2),
         rep("Early Risk Factors", 3),
-        rep("Mood", 6),
-        rep("Psychosis", 13),
+        rep("Affective Symptoms", 6),
+        rep("Psychotic Experiences", 13),
         rep("Covariate", 1)
       ),
       levels = c(
         "Cannabis Use Characteristics",
         "Early Risk Factors",
-        "Mood",
-        "Psychosis",
+        "Affective Symptoms",
+        "Psychotic Experiences",
         "Covariate"
       )
     ),
