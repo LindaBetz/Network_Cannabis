@@ -361,15 +361,15 @@ main_network <- qgraph(
     c(
       rep("Cannabis Use Characteristics", 2),
       rep("Early Risk Factors", 3),
-      rep("Mood", 6),
-      rep("Psychosis", 13),
+      rep("Affective Symptoms", 6),
+      rep("Psychotic Experiences", 13),
       rep("Covariate", 1)
     ),
     levels = c(
       "Cannabis Use Characteristics",
       "Early Risk Factors",
-      "Mood",
-      "Psychosis",
+      "Affective Symptoms",
+      "Psychotic Experiences",
       "Covariate"
     )
   ),
